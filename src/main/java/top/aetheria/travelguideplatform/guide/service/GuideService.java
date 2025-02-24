@@ -22,8 +22,10 @@ public interface GuideService {
 
     void unfavorite(Long guideId, Long userId);
 
+    void recordGuideView(Long userId, Long guideId); // 记录用户浏览攻略
     PageResult<GuideInfoDTO> getRecommendedGuides(Long userId, int page, int pageSize);
     PageResult<GuideInfoDTO> getPopularGuides(int page, int pageSize);
     PageResult<GuideInfoDTO> getLatestGuides(int page, int pageSize);
     List<Tag> getPopularTags(int limit); // 获取热门标签
+
 }

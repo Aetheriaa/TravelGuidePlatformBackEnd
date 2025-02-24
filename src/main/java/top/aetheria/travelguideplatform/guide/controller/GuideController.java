@@ -17,6 +17,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -185,5 +186,25 @@ public class GuideController {
     public Result<List<Tag>> getPopularTags(@RequestParam(defaultValue = "10") int limit) {
         List<Tag> tags = guideService.getPopularTags(limit); // 调用 Service 层方法
         return Result.success(tags);
+    }
+
+    // 新增：记录攻略浏览
+    @PostMapping("/{guideId}/view")
+    public Result recordGuideView(@PathVariable Long guideId, @RequestBody Map<String,Long> requestBody, HttpServletRequest request) {
+        // 从请求头中获取token
+        String token = request.getHeader(AppConstants.JWT_HEADER_KEY);
+        if (token != null && token.startsWith(AppConstants.JWT_TOKEN_PREFIX)) {
+            token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
+        }
+        Long userId = jwtUtils.getUserIdFromToken(token);
+        if (userId == null) {
+            return Result.error(401,"请先登录");
+        }
+        // 检查guideId是否为空
+        if(guideId == null){
+            return Result.error(400,"参数错误");
+        }
+        guideService.recordGuideView(userId, guideId);
+        return Result.success();
     }
 }

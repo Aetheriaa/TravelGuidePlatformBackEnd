@@ -55,4 +55,13 @@ public interface GuideMapper {
     @Delete("DELETE FROM guide_tags WHERE guide_id = #{guideId}")
     void deleteGuideTags(Long guideId);
 
+    // 根据ID列表查询攻略
+    @Select("<script>" +
+            "SELECT * FROM guides WHERE id IN " +
+            "<foreach item='item' index='index' collection='guideIds' open='(' separator=',' close=')'>" +
+            "#{item}" +
+            "</foreach>" +
+            "</script>")
+    List<Guide> findByIds(@Param("guideIds") List<Long> guideIds);
+
 }

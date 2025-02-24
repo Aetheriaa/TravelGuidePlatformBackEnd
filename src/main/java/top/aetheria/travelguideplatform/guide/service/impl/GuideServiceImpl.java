@@ -20,14 +20,19 @@ import top.aetheria.travelguideplatform.guide.mapper.LikeMapper;
 import top.aetheria.travelguideplatform.guide.mapper.TagMapper;
 import top.aetheria.travelguideplatform.guide.service.GuideService;
 import top.aetheria.travelguideplatform.user.entity.User;
+import top.aetheria.travelguideplatform.user.entity.UserGuideHistory;
+import top.aetheria.travelguideplatform.user.mapper.UserGuideHistoryMapper;
 import top.aetheria.travelguideplatform.user.mapper.UserMapper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigInteger;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -46,6 +51,9 @@ public class GuideServiceImpl implements GuideService {
 
     @Autowired
     private TagMapper tagMapper;
+
+    @Autowired
+    UserGuideHistoryMapper userGuideHistoryMapper;
 
     @Override
     @Transactional
@@ -240,6 +248,18 @@ public class GuideServiceImpl implements GuideService {
     }
 
     @Override
+    @Transactional
+    public void recordGuideView(Long userId, Long guideId) {
+        // 插入浏览历史记录
+        // 这里假设你有一个 UserGuideHistoryMapper 和 UserGuideHistory 实体类
+
+        userGuideHistoryMapper.insert(new UserGuideHistory(userId, guideId, LocalDateTime.now()));
+
+        // 更新攻略的浏览量
+        guideMapper.incrementViewCount(guideId);
+    }
+
+    @Override
     public PageResult<GuideInfoDTO> getRecommendedGuides(Long userId, int page, int pageSize) {
         // TODO: 在这里实现个性化推荐算法
         // 1. 根据 userId 获取用户的兴趣标签、浏览历史等信息 (需要额外的表和 Mapper 方法)
@@ -247,38 +267,211 @@ public class GuideServiceImpl implements GuideService {
         // 3. 可以使用一些推荐算法 (例如，基于内容的推荐、协同过滤等) 来计算推荐结果
         // 4. 这里只是一个示例，返回一个空的列表，你需要根据你的实际需求来实现
         // 暂时返回所有
+//        // 1. 获取用户的兴趣标签
+//        List<String> userTags = userMapper.findUserTags(userId);
+//        // 2. 创建 GuideListDTO 对象，并设置查询条件
 //        GuideListDTO guideListDTO = new GuideListDTO();
-//        PageHelper.startPage(page,pageSize);
+//        guideListDTO.setTags(userTags);
+//
+//        // 3. 设置分页参数
+//        PageHelper.startPage(page, pageSize);
+//
+//        // 4. 调用 guideMapper.list 方法进行查询 (需要修改 list 方法)
 //        List<Guide> guides = guideMapper.list(guideListDTO);
+//
+//        // 5. 获取分页结果
 //        Page<Guide> pageInfo = (Page<Guide>) guides;
-//        List<GuideInfoDTO> guideInfoDTOS =  pageInfo.stream().map(guide->{
-//            GuideInfoDTO guideInfoDTO = new GuideInfoDTO();
-//            BeanUtils.copyProperties(guide,guideInfoDTO);
-//            return guideInfoDTO;
-//        }).collect(Collectors.toList());
-//        return new PageResult<>(pageInfo.getTotal(),guideInfoDTOS);
-        // 1. 获取用户的兴趣标签
-        List<String> userTags = userMapper.findUserTags(userId);
-        // 2. 创建 GuideListDTO 对象，并设置查询条件
-        GuideListDTO guideListDTO = new GuideListDTO();
-        guideListDTO.setTags(userTags);
+//
+//        // 6. 将 Guide 列表转换为 GuideInfoDTO 列表,并查询作者信息
+//        List<GuideInfoDTO> guideInfoDTOS = guides.stream()
+//                .map(guide -> {
+//                    GuideInfoDTO guideInfoDTO = new GuideInfoDTO();
+//                    BeanUtils.copyProperties(guide, guideInfoDTO);
+//                    User user = userMapper.findById(guide.getUserId());
+//                    if(user!=null){
+//                        guideInfoDTO.setAuthorName(user.getUsername());
+//                        guideInfoDTO.setAuthorAvatar(user.getAvatar());
+//                    }
+//                    // 查询tags
+//                    List<Tag> tags = guideMapper.findTagsByGuideId(guide.getId());
+//                    guideInfoDTO.setTags(tags.stream().map(Tag::getName).collect(Collectors.toList()));
+//
+//                    return guideInfoDTO;
+//                })
+//                .collect(Collectors.toList());
+//
+//        // 7. 返回 PageResult 对象
+//        return new PageResult<>(pageInfo.getTotal(), guideInfoDTOS);
+        // 1. 获取用户最近浏览的攻略ID列表（例如，最近一个月内）
+        LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
+        List<Long> viewedGuideIds = userGuideHistoryMapper.findRecentGuideIdsByUserId(userId, oneMonthAgo);
+        //List<Long> viewedGuideIds = userGuideHistoryMapper.findRecentGuideIdsByUserId(userId);
+        List<Guide> allGuides = new ArrayList<>(); // 用于存储所有查询结果的列表
 
-        // 3. 设置分页参数
-        PageHelper.startPage(page, pageSize);
+        if (viewedGuideIds.isEmpty()) {
+            // 如果用户没有浏览历史，可以返回热门攻略、最新攻略或空列表
+            // 这里返回一个空的 PageResult 作为示例
+            GuideListDTO fallbackDTO = new GuideListDTO();
+            fallbackDTO.setSortBy("createTime");
+            fallbackDTO.setSortOrder("desc");
+            fallbackDTO.setPage(page);
+            fallbackDTO.setPageSize(pageSize * 10);
+            PageHelper.startPage(page, pageSize * 10); // 启动 PageHelper 分页，页码设置为1，页大小为剩余数量
+            List<Guide> fallbackGuides = guideMapper.list(fallbackDTO);
+            Collections.shuffle(fallbackGuides);
+            allGuides.addAll(new ArrayList<>(fallbackGuides.subList(0, 8)));
+//            return new PageResult<>(0L, Collections.emptyList());
 
-        // 4. 调用 guideMapper.list 方法进行查询 (需要修改 list 方法)
-        List<Guide> guides = guideMapper.list(guideListDTO);
+        }
 
-        // 5. 获取分页结果
-        Page<Guide> pageInfo = (Page<Guide>) guides;
+        else {// 2. 获取这些攻略的标签，并计算标签权重
+            Map<String, Double> tagWeights = new HashMap<>();
+            for (Long guideId : viewedGuideIds) {
+                Guide guide = guideMapper.findById(guideId); // 假设你有 findById 方法
+                if (guide != null && guide.getTags() != null) {
+                    String[] tags = guide.getTags().split(","); // 假设标签是用逗号分隔的
+                    for (String tag : tags) {
+                        tag = tag.trim(); // 去除空格
+                        if (!tag.isEmpty()) {
+                            // 简单的权重计算：出现一次，权重加 1
+                            // 你可以根据需要调整权重计算方法，例如添加时间衰减因子
+                            tagWeights.put(tag, tagWeights.getOrDefault(tag, 0.0) + 1.0);
+                        }
+                    }
+                }
+            }
 
-        // 6. 将 Guide 列表转换为 GuideInfoDTO 列表,并查询作者信息
-        List<GuideInfoDTO> guideInfoDTOS = guides.stream()
+            // 3. 根据标签权重查询攻略
+            if (tagWeights.isEmpty()) {
+                GuideListDTO fallbackDTO = new GuideListDTO();
+                fallbackDTO.setSortBy("createTime");
+                fallbackDTO.setSortOrder("desc");
+                fallbackDTO.setPage(page);
+                fallbackDTO.setPageSize(pageSize * 10);
+                PageHelper.startPage(page, pageSize * 10); // 启动 PageHelper 分页，页码设置为1，页大小为剩余数量
+                List<Guide> fallbackGuides = guideMapper.list(fallbackDTO);
+                Collections.shuffle(fallbackGuides);
+                allGuides.addAll(new ArrayList<>(fallbackGuides.subList(0, 8)));
+
+//                return new PageResult<>(0L, Collections.emptyList());
+            }
+
+            else{// 构建查询条件
+                GuideListDTO guideListDTO = new GuideListDTO();
+                // 将标签权重转换为 List<String> (这里只是一个示例，你可以根据需要调整)
+                List<String> weightedTags = tagWeights.entrySet().stream()
+                        .sorted(Map.Entry.<String, Double>comparingByValue().reversed()) // 按权重降序排序
+                        .limit(15) // 取权重最高的 10 个标签 (你可以根据需要调整)
+                        .map(Map.Entry::getKey)
+                        .collect(Collectors.toList());
+
+//        guideListDTO.setTags(weightedTags);
+                guideListDTO.setPage(page);
+                guideListDTO.setPageSize(pageSize);
+
+                // 4. 分页查询
+//        PageHelper.startPage(page, pageSize);
+//        List<Guide> guides = new ArrayList<>();
+//        for(var weightedTag : weightedTags) {
+//            List<String> weightedT =new ArrayList<>();
+//            weightedT.add(weightedTag);
+//            guideListDTO.setTags(weightedTags);
+//            guides.addAll(new ArrayList<>(guideMapper.list(guideListDTO)));
+//        }
+////        List<Guide> guides = guideMapper.list(guideListDTO);
+//        Page<Guide> pageInfo = (Page<Guide>) guides;
+//
+//        // 5. 转换为 GuideInfoDTO 并返回
+//        List<GuideInfoDTO> guideInfoDTOS = guides.stream()
+//                .map(guide -> {
+//                    GuideInfoDTO guideInfoDTO = new GuideInfoDTO();
+//                    BeanUtils.copyProperties(guide, guideInfoDTO);
+//                    // 查询作者信息
+//                    User user = userMapper.findById(guide.getUserId());
+//                    if (user != null) {
+//                        guideInfoDTO.setAuthorName(user.getUsername());
+//                        guideInfoDTO.setAuthorAvatar(user.getAvatar());
+//                    }
+//                    // 查询tags
+//                    List<Tag> tags = guideMapper.findTagsByGuideId(guide.getId());
+//                    guideInfoDTO.setTags(tags.stream().map(Tag::getName).collect(Collectors.toList()));
+//
+//                    // 查询当前用户是否点赞、收藏
+//                    if (userId != null) {
+//                        Like like = new Like();
+//                        like.setGuideId(guide.getId());
+//                        like.setUserId(userId);
+//                        guideInfoDTO.setLiked(likeMapper.countByGuideIdAndUserId(like) > 0);
+//
+//                        Favorite favorite = new Favorite();
+//                        favorite.setGuideId(guide.getId());
+//                        favorite.setUserId(userId);
+//                        guideInfoDTO.setFavorited(favoriteMapper.countByGuideIdAndUserId(favorite) > 0);
+//                    }
+//                    return guideInfoDTO;
+//                })
+//                .collect(Collectors.toList());
+//
+//        return new PageResult<>(pageInfo.getTotal(), guideInfoDTOS);
+
+                for (var weightedTag : weightedTags) {
+                    List<String> weightedT = new ArrayList<>();
+                    weightedT.add(weightedTag);
+                    guideListDTO.setTags(weightedT); // 每次循环只设置一个 tag 用于查询
+//            allGuides.addAll(guideMapper.list(guideListDTO)); // 执行查询并添加到总列表
+                    List<Guide> tguide = guideMapper.list(guideListDTO);
+                    Collections.shuffle(tguide);
+                    allGuides.add(tguide.get(0)); // 执行查询并添加到总列表
+                }
+                // 2. 检查数量是否不足 8 个，如果不足则进行补充查询
+                if (allGuides.size() < 8) {
+                    int remainingCount = 8 - allGuides.size();
+                    GuideListDTO fallbackDTO = new GuideListDTO();
+                    fallbackDTO.setSortBy("createTime");
+                    fallbackDTO.setSortOrder("desc");
+                    fallbackDTO.setPage(page); // 补充查询从第一页开始
+                    fallbackDTO.setPageSize(pageSize * 10); // 补充查询的数量为剩余需要的数量
+                    PageHelper.startPage(page, pageSize * 10); // 启动 PageHelper 分页，页码设置为1，页大小为剩余数量
+                    List<Guide> fallbackGuides = guideMapper.list(fallbackDTO);
+                    Collections.shuffle(fallbackGuides);
+                    allGuides.addAll(new ArrayList<>(fallbackGuides.subList(0, remainingCount)));
+                }
+
+                // 3. 截取前 8 个 (如果合并后超过 8 个)
+                if (allGuides.size() > 8) {
+                    allGuides = allGuides.subList(0, 8);
+                }
+            }
+        }
+        // 2. 手动分页逻辑
+        int totalRecords = allGuides.size();
+        int startIndex = (page - 1) * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, totalRecords);
+
+        List<Guide> pagedGuideList; // 当前页的 Guide 列表
+        if (startIndex >= totalRecords || startIndex < 0) {
+            pagedGuideList = new ArrayList<>(); // 页码超出范围，返回空列表
+        } else {
+            pagedGuideList = allGuides.subList(startIndex, endIndex); // 截取当前页数据
+        }
+
+        // 3. 手动创建 Page<Guide> 对象
+        Page<Guide> pageInfo = new Page<>();
+        pageInfo.addAll(pagedGuideList); // 设置当前页数据
+        pageInfo.setTotal(totalRecords);     // 设置总记录数
+        pageInfo.setPageNum(page);         // 设置页码
+        pageInfo.setPageSize(pageSize);     // 设置页大小
+        pageInfo.setPages((int) Math.ceil((double) totalRecords / pageSize)); // 计算总页数 (向上取整)
+
+
+        // 5. 转换为 GuideInfoDTO 并返回 (基于分页后的 pagedGuideList)
+        List<GuideInfoDTO> guideInfoDTOS = pagedGuideList.stream() // 使用 pagedGuideList 而不是 allGuides
                 .map(guide -> {
                     GuideInfoDTO guideInfoDTO = new GuideInfoDTO();
                     BeanUtils.copyProperties(guide, guideInfoDTO);
+                    // 查询作者信息
                     User user = userMapper.findById(guide.getUserId());
-                    if(user!=null){
+                    if (user != null) {
                         guideInfoDTO.setAuthorName(user.getUsername());
                         guideInfoDTO.setAuthorAvatar(user.getAvatar());
                     }
@@ -286,12 +479,23 @@ public class GuideServiceImpl implements GuideService {
                     List<Tag> tags = guideMapper.findTagsByGuideId(guide.getId());
                     guideInfoDTO.setTags(tags.stream().map(Tag::getName).collect(Collectors.toList()));
 
+                    // 查询当前用户是否点赞、收藏
+                    if (userId != null) {
+                        Like like = new Like();
+                        like.setGuideId(guide.getId());
+                        like.setUserId(userId);
+                        guideInfoDTO.setLiked(likeMapper.countByGuideIdAndUserId(like) > 0);
+
+                        Favorite favorite = new Favorite();
+                        favorite.setGuideId(guide.getId());
+                        favorite.setUserId(userId);
+                        guideInfoDTO.setFavorited(favoriteMapper.countByGuideIdAndUserId(favorite) > 0);
+                    }
                     return guideInfoDTO;
                 })
                 .collect(Collectors.toList());
 
-        // 7. 返回 PageResult 对象
-        return new PageResult<>(pageInfo.getTotal(), guideInfoDTOS);
+        return new PageResult<>(pageInfo.getTotal(), guideInfoDTOS); // 使用 pageInfo.getTotal() 获取总数
     }
 
     @Override

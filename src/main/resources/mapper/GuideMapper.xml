@@ -14,6 +14,22 @@
 <!--            AND status = 1-->
 <!--        </where>-->
 <!--    </sql>-->
+<!--    <sql id="query_guide_where">-->
+<!--        <where>-->
+<!--            <if test="keyword != null and keyword != ''">-->
+<!--                AND (title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%'))-->
+<!--            </if>-->
+<!--            &lt;!&ndash; 标签筛选 &ndash;&gt;-->
+<!--            <if test="tags != null and tags.size() > 0">-->
+<!--                AND (-->
+<!--                <foreach collection="tags" item="tag" separator=" OR ">-->
+<!--                    tags LIKE CONCAT('%', #{tag}, '%')-->
+<!--                </foreach>-->
+<!--                )-->
+<!--            </if>-->
+<!--            AND status = 1-->
+<!--        </where>-->
+<!--    </sql>-->
     <sql id="query_guide_where">
         <where>
             <if test="keyword != null and keyword != ''">
@@ -23,7 +39,7 @@
             <if test="tags != null and tags.size() > 0">
                 AND (
                 <foreach collection="tags" item="tag" separator=" OR ">
-                    tags LIKE CONCAT('%', #{tag}, '%')
+                    FIND_IN_SET(#{tag}, tags) > 0
                 </foreach>
                 )
             </if>
