@@ -180,9 +180,9 @@ CREATE TABLE `tags` (
 
 -- 攻略-标签关联表 (多对多)
 CREATE TABLE `guide_tags` (
-                              `guide_id` BIGINT UNSIGNED NOT NULL,
-                              `tag_id` INT UNSIGNED NOT NULL,
-                              PRIMARY KEY (`guide_id`, `tag_id`),
-                              FOREIGN KEY (`guide_id`) REFERENCES `guides` (`id`) ON DELETE CASCADE,  -- 级联删除
-                              FOREIGN KEY (`tag_id`) REFERENCES `tags` (`id`) ON DELETE CASCADE     -- 级联删除
+     `guide_id` BIGINT UNSIGNED NOT NULL,
+     `tag_id` INT UNSIGNED NOT NULL,
+     PRIMARY KEY (`guide_id`, `tag_id`),
+     FOREIGN KEY (`guide_id`) REFERENCES `guides` (`id`) ON DELETE CASCADE,  -- 级联删除
+     FOREIGN KEY (`tag_id`) REFERENCES `tags` (`id`) ON DELETE CASCADE     -- 级联删除
 ) ENGINE=InnoDB;

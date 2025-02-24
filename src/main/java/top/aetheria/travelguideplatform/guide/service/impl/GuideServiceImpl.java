@@ -259,7 +259,6 @@ public class GuideServiceImpl implements GuideService {
 //        return new PageResult<>(pageInfo.getTotal(),guideInfoDTOS);
         // 1. 获取用户的兴趣标签
         List<String> userTags = userMapper.findUserTags(userId);
-
         // 2. 创建 GuideListDTO 对象，并设置查询条件
         GuideListDTO guideListDTO = new GuideListDTO();
         guideListDTO.setTags(userTags);
