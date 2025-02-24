@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.aetheria.travelguideplatform.itinerary.mapper.ItineraryMapper">
+    <sql id = "query_itinerary_where">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                and name like concat('%',#{keyword},'%')
+            </if>
+        </where>
+    </sql>
+    <select id="list" resultType="top.aetheria.travelguideplatform.itinerary.entity.Itinerary">
+        select * from itineraries
+        <include refid="query_itinerary_where"></include>
+    </select>
+    <select id="count" resultType="java.lang.Long">
+        select count(*) from itineraries
+        <include refid="query_itinerary_where"></include>
+    </select>
+</mapper>

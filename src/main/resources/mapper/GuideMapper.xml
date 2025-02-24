@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.aetheria.travelguideplatform.guide.mapper.GuideMapper">
+
+    <!-- 动态SQL：用于攻略列表查询的条件 -->
+<!--    <sql id="query_guide_where">-->
+<!--        <where>-->
+<!--            <if test="keyword != null and keyword != ''">-->
+<!--                AND (title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%'))-->
+<!--            </if>-->
+<!--            <if test="tag != null and tag != ''">-->
+<!--                AND tags LIKE CONCAT('%', #{tag}, '%')-->
+<!--            </if>-->
+<!--            AND status = 1-->
+<!--        </where>-->
+<!--    </sql>-->
+    <sql id="query_guide_where">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <!-- 标签筛选 -->
+            <if test="tags != null and tags.size() > 0">
+                AND (
+                <foreach collection="tags" item="tag" separator=" OR ">
+                    tags LIKE CONCAT('%', #{tag}, '%')
+                </foreach>
+                )
+            </if>
+            AND status = 1
+        </where>
+    </sql>
+    <!--列表查询-->
+    <select id="list" resultType="top.aetheria.travelguideplatform.guide.entity.Guide">
+        SELECT *
+        FROM guides
+        <include refid="query_guide_where"/>
+        <if test="sortBy != null and sortBy != ''">
+            ORDER BY
+            <choose>
+                <when test="sortBy == 'createTime'">create_time</when>
+                <when test="sortBy == 'updateTime'">update_time</when>
+                <when test="sortBy == 'viewCount'">view_count</when>
+                <when test="sortBy == 'likeCount'">like_count</when>
+                <when test="sortBy == 'commentCount'">comment_count</when>
+                <otherwise>create_time</otherwise>
+            </choose>
+            <if test="sortOrder != null and sortOrder != ''">
+                <choose>
+                    <when test="sortOrder == 'asc'">ASC</when>
+                    <when test="sortOrder == 'desc'">DESC</when>
+                    <otherwise>DESC</otherwise>
+                </choose>
+            </if>
+        </if>
+    </select>
+    <!--查询总数-->
+    <select id="count" resultType="java.lang.Long">
+        SELECT count(*)
+        FROM guides
+        <include refid="query_guide_where"/>
+    </select>
+</mapper>

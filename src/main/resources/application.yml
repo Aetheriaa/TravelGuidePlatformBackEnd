@@ -1,0 +1,25 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: TravelGuidePlatform
+  datasource:
+#    url: jdbc:mysql://localhost:3306/travel_platform?useSSL=false&serverTimezone=UTC&characterEncoding=utf8
+    url: jdbc:mysql://localhost:3306/travel_platform?allowPublicKeyRetrieval=true&useSSL=true&serverTimezone=UTC&characterEncoding=utf8
+    username: root
+    password: 182818
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: top.aetheria.travelguideplatform.user.entity
+
+jwt:
+  secret: eGK#Zxvg{V!4@p:Uwjf>}&-Y;tLPd)y6(C5[.sD7/+TF_R"=aq
+  expiration: 86400
+pagehelper:
+  helperDialect: mysql # 数据库方言
+  reasonable: true     # 页码合理化
+  supportMethodsArguments: true
+  params: count=countSql
