@@ -99,6 +99,12 @@ public class GuideServiceImpl implements GuideService {
         }
         GuideInfoDTO guideInfoDTO = new GuideInfoDTO();
         BeanUtils.copyProperties(guide, guideInfoDTO);
+
+        if (guide.getTags() != null && !guide.getTags().isEmpty()) {
+            List<String> tagList = Arrays.asList(guide.getTags().split("\\s*,\\s*")); // 正则表达式分割，并去除多余空格
+            guideInfoDTO.setTags(tagList);
+        }
+//        System.out.println(guideInfoDTO.getTags());
         //查询作者信息
         User user = userMapper.findById(guide.getUserId());
         if (user != null) {
