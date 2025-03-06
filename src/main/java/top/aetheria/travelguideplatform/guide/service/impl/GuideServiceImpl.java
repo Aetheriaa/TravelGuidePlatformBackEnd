@@ -27,11 +27,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigInteger;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -304,7 +300,7 @@ public class GuideServiceImpl implements GuideService {
 //        return new PageResult<>(pageInfo.getTotal(), guideInfoDTOS);
         // 1. 获取用户最近浏览的攻略ID列表（例如，最近一个月内）
         LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
-        List<Long> viewedGuideIds = userGuideHistoryMapper.findRecentGuideIdsByUserId(userId, oneMonthAgo);
+        List<Long> viewedGuideIds = userGuideHistoryMapper.findRecentGuideIdsByUserIdAndDate(userId, oneMonthAgo);
         //List<Long> viewedGuideIds = userGuideHistoryMapper.findRecentGuideIdsByUserId(userId);
         List<Guide> allGuides = new ArrayList<>(); // 用于存储所有查询结果的列表
 
@@ -542,4 +538,6 @@ public class GuideServiceImpl implements GuideService {
     public List<Tag> getPopularTags(int limit) {
         return tagMapper.findPopularTags(limit);
     }
+
+
 }

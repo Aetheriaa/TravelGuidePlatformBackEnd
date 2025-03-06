@@ -47,4 +47,25 @@ public interface UserMapper {
 
     @Delete("DELETE FROM user_tags WHERE user_id = #{userId}")
     void deleteUserTags(Long userId);
+
+    @Insert("INSERT INTO follows (follower_id, following_id) VALUES (#{followerId}, #{followingId})")
+    void insertFollow(@Param("followerId") Long followerId, @Param("followingId") Long followingId);
+
+    @Delete("DELETE FROM follows WHERE follower_id = #{followerId} AND following_id = #{followingId}")
+    void deleteFollow(@Param("followerId") Long followerId, @Param("followingId") Long followingId);
+
+    @Select("SELECT COUNT(*) FROM follows WHERE follower_id = #{followerId} AND following_id = #{followingId}")
+    boolean isFollowing(@Param("followerId") Long followerId, @Param("followingId") Long followingId);
+
+    @Select("SELECT u.* FROM users u JOIN follows f ON u.id = f.following_id WHERE f.follower_id = #{userId}")
+    List<User> findFollowing(Long userId); // 获取关注列表
+
+    @Select("SELECT u.* FROM users u JOIN follows f ON u.id = f.follower_id WHERE f.following_id = #{userId}")
+    List<User> findFollowers(Long userId); // 获取粉丝列表
+
+    @Select("SELECT COUNT(*) FROM follows WHERE follower_id = #{userId}")
+    int getFollowingCount(Long userId);
+
+    @Select("SELECT COUNT(*) FROM follows WHERE following_id = #{userId}")
+    int getFollowerCount(Long userId);
 }

@@ -186,3 +186,30 @@ CREATE TABLE `guide_tags` (
      FOREIGN KEY (`guide_id`) REFERENCES `guides` (`id`) ON DELETE CASCADE,  -- 级联删除
      FOREIGN KEY (`tag_id`) REFERENCES `tags` (`id`) ON DELETE CASCADE     -- 级联删除
 ) ENGINE=InnoDB;
+
+
+CREATE TABLE `user_guide_history` (
+                                      `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                                      `user_id` BIGINT UNSIGNED NOT NULL,
+                                      `guide_id` BIGINT UNSIGNED NOT NULL,
+                                      `view_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                      PRIMARY KEY (`id`),
+                                      KEY `idx_user_id` (`user_id`),
+                                      KEY `idx_guide_id` (`guide_id`),
+                                      FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
+                                      FOREIGN KEY (`guide_id`) REFERENCES `guides` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `private_messages` (
+                                    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                                    `sender_id` BIGINT UNSIGNED NOT NULL,
+                                    `receiver_id` BIGINT UNSIGNED NOT NULL,
+                                    `content` TEXT NOT NULL,
+                                    `send_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                    `is_read` TINYINT NOT NULL DEFAULT 0, -- 是否已读 (0: 未读, 1: 已读)
+                                    PRIMARY KEY (`id`),
+                                    KEY `idx_sender_id` (`sender_id`),
+                                    KEY `idx_receiver_id` (`receiver_id`),
+                                    FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`),
+                                    FOREIGN KEY (`receiver_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

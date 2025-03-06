@@ -207,4 +207,5 @@ public class GuideController {
         guideService.recordGuideView(userId, guideId);
         return Result.success();
     }
+
 }

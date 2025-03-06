@@ -19,11 +19,16 @@ public interface UserGuideHistoryMapper {
 
     // 查询用户最近浏览的攻略ID列表
     @Select("SELECT guide_id FROM user_guide_history WHERE user_id = #{userId} AND view_time >= #{since} ORDER BY view_time DESC")
-    List<Long> findRecentGuideIdsByUserId(@Param("userId") Long userId, @Param("since") LocalDateTime since);
-//    @Select("SELECT guide_id FROM user_guide_history WHERE user_id = #{userId} ORDER BY view_time DESC")
-//     List<Long> findRecentGuideIdsByUserId(@Param("userId") Long userId);
+    List<Long> findRecentGuideIdsByUserIdAndDate(@Param("userId") Long userId, @Param("since") LocalDateTime since);
+    @Select("SELECT guide_id FROM user_guide_history WHERE user_id = #{userId} ORDER BY view_time DESC")
+     List<Long> findRecentGuideIdsByUserId(@Param("userId") Long userId);
 
     // 查询用户最近浏览的攻略ID和浏览时间, 返回List<Map<String, Object>>
-    @Select("SELECT guide_id, view_time FROM user_guide_history WHERE user_id = #{userId} AND view_time >= #{since} ORDER BY view_time DESC")
-    List<Map<String, Object>> findRecentGuidesWithViewTime(@Param("userId") Long userId, @Param("since") LocalDateTime since);
+    @Select("SELECT guide_id, view_time FROM user_guide_history WHERE user_id = #{userId}  ORDER BY view_time DESC LIMIT #{offset}, #{limit}")
+    List<Map<String, Object>> findRecentGuidesWithViewTime(@Param("userId") Long userId,@Param("offset") int offset, @Param("limit") int limit);
+
+    List<Map<String, Object>> findHistoryByUserId(@Param("userId") Long userId, @Param("offset") int offset, @Param("limit") int limit);
+    // 查询总数
+    Long countHistoryByUserId(Long userId);
+
 }

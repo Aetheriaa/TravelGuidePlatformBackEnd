@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.aetheria.travelguideplatform.private_message.mapper.PrivateMessageMapper">
+        <!--
+            <resultMap id="PrivateMessageResultMap" type="top.aetheria.travelguideplatform.private_message.dto.PrivateMessageDTO">
+                <id property="id" column="id"/>
+                <result property="senderId" column="sender_id"/>
+                <result property="senderName" column="senderName"/>
+                <result property="senderAvatar" column="senderAvatar"/>
+                <result property="receiverId" column="receiver_id"/>
+                <result property="receiverName" column="receiverName"/>
+                <result property="receiverAvatar" column="receiverAvatar"/>
+                <result property="content" column="content"/>
+                <result property="sendTime" column="send_time"/>
+                <result property="isRead" column="is_read"/>
+
+            </resultMap>
+        -->
+        <!-- 查询私信列表 (最近的联系人) -->
+<!--        <select id="findRecentContacts" resultType="top.aetheria.travelguideplatform.private_message.dto.PrivateMessageDTO">-->
+<!--            SELECT other_user.id AS otherUserId, other_user.username AS otherUsername,other_user.avatar as otherUserAvatar,-->
+<!--            pm.content, pm.send_time, pm.is_read,-->
+<!--            pm.sender_id, pm.receiver_id, u1.username AS senderName, u2.username AS receiverName,-->
+<!--            u1.avatar as senderAvatar,u2.avatar as receiverAvatar-->
+<!--            FROM (-->
+<!--            SELECT-->
+<!--            CASE-->
+<!--            WHEN sender_id = #{userId} THEN receiver_id-->
+<!--            ELSE sender_id-->
+<!--            END AS other_user_id,-->
+<!--            MAX(send_time) AS max_send_time  &lt;!&ndash; 取每个对话的最新一条消息的时间 &ndash;&gt;-->
+<!--            FROM private_messages-->
+<!--            WHERE sender_id = #{userId} OR receiver_id = #{userId}-->
+<!--            GROUP BY other_user_id-->
+<!--            ) AS latest_messages-->
+<!--            JOIN private_messages pm ON (-->
+<!--            (pm.sender_id = #{userId} AND pm.receiver_id = latest_messages.other_user_id)-->
+<!--            OR (pm.sender_id = latest_messages.other_user_id AND pm.receiver_id = #{userId})-->
+<!--            )-->
+<!--            JOIN users other_user ON other_user.id = latest_messages.other_user_id-->
+<!--            LEFT JOIN users u1 ON pm.sender_id = u1.id-->
+<!--            LEFT JOIN users u2 ON pm.receiver_id = u2.id-->
+<!--            WHERE pm.send_time = latest_messages.max_send_time  &lt;!&ndash; 只取每个对话的最新一条消息 &ndash;&gt;-->
+<!--            ORDER BY pm.send_time DESC-->
+<!--        </select>-->
+</mapper>
