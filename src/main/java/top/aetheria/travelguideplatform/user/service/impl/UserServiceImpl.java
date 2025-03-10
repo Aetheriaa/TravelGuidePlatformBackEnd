@@ -37,6 +37,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.time.format.DateTimeFormatter;
+
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -163,9 +165,9 @@ public class UserServiceImpl implements UserService {
         // 查询浏览历史数据
         List<Map<String, Object>> historyEntries = userGuideHistoryMapper.findRecentGuidesWithViewTime(userId, offset, limit);
         // 查询总数
-        Long total = userGuideHistoryMapper.countHistoryByUserId(userId);
-
+        Long total = (long) historyEntries.size();
         // 将浏览历史数据转换为 GuideInfoDTO 列表
+
         List<GuideInfoDTO> guideInfoDTOList = historyEntries.stream()
                 .map(entry -> {
                     Long guideId = ((Number) entry.get("guide_id")).longValue();
@@ -177,6 +179,19 @@ public class UserServiceImpl implements UserService {
                     BeanUtils.copyProperties(guide, dto);
                     // 设置其他属性，例如作者信息、点赞/收藏状态等 (如果需要)
                     // ...
+                    User user = userMapper.findById(guide.getUserId());
+                    if (user != null) {
+                        dto.setAuthorName(user.getUsername());
+                        dto.setAuthorAvatar(user.getAvatar());
+                    }
+
+                    String viewTimeString = entry.get("view_time").toString();
+                    // 定义 DateTimeFormatter，直接处理带一位小数的秒
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.S");
+                    // 解析字符串为 LocalDateTime 对象
+                    LocalDateTime time = LocalDateTime.parse(viewTimeString, formatter);
+                    dto.setCreateTime(time);
+
                     return dto;
                 })
                 .filter(Objects::nonNull) // 过滤掉 null 值
@@ -220,9 +235,18 @@ public class UserServiceImpl implements UserService {
         List<Guide> guides = favoriteMapper.findFavoriteGuideIdsByUserId(userId);
         // 获取分页信息
         PageInfo<Guide> pageInfo = new PageInfo<>(guides);
-        List<GuideInfoDTO> guideInfoDTOS =  guides.stream().map(guide->{
+        List<GuideInfoDTO> guideInfoDTOS = guides.stream().map(guide -> {
             GuideInfoDTO guideInfoDTO = new GuideInfoDTO();
             BeanUtils.copyProperties(guide,guideInfoDTO);
+            // 查询作者信息
+            User user = userMapper.findById(guide.getUserId());
+            if (user != null) {
+                guideInfoDTO.setAuthorName(user.getUsername());
+                guideInfoDTO.setAuthorAvatar(user.getAvatar());
+            }
+            // 查询tags
+//            List<Tag> tags = tagMapper.findTagsByGuideId(guide.getId());
+//            guideInfoDTO.setTags(tags.stream().map(Tag::getName).collect(Collectors.toList()));
             return guideInfoDTO;
         }).collect(Collectors.toList());
         return new PageResult<>(pageInfo.getTotal(),guideInfoDTOS);
