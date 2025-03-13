@@ -68,4 +68,15 @@ public interface UserMapper {
 
     @Select("SELECT COUNT(*) FROM follows WHERE following_id = #{userId}")
     int getFollowerCount(Long userId);
+
+    @Select("<script>\n" +
+            "SELECT * FROM users \n" +
+            "<where>\n" +
+            "  <if test='keyword != null and keyword != \"\" '>\n" +
+            "    username LIKE CONCAT('%', #{keyword}, '%') OR nickname LIKE CONCAT('%', #{keyword}, '%')\n" +
+            "  </if>\n" +
+            "</where>\n" +
+            "</script>")
+    List<User> searchUsers(String keyword); // 搜索用户
+
 }

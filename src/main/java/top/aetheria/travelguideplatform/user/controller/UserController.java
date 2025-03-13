@@ -221,4 +221,10 @@ public class UserController {
         int count = userService.getFollowerCount(userId);
         return Result.success(count);
     }
+
+    @GetMapping("/search")
+    public Result<List<User>> searchUsers(@RequestParam String keyword) {
+        List<User> users = userService.searchUsers(keyword);
+        return Result.success(users);
+    }
 }

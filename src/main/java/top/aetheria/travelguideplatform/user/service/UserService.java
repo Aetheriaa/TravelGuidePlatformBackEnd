@@ -30,4 +30,6 @@ public interface UserService {
 
     int getFollowingCount(Long userId);
     int getFollowerCount(Long userId);
+
+    List<User> searchUsers(String keyword); // 搜索用户
 }

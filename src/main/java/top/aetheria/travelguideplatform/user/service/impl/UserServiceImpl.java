@@ -302,4 +302,9 @@ public class UserServiceImpl implements UserService {
     public int getFollowerCount(Long userId) {
         return userMapper.getFollowerCount(userId);
     }
+
+    @Override
+    public List<User> searchUsers(String keyword) {
+        return userMapper.searchUsers(keyword);
+    }
 }
