@@ -30,36 +30,75 @@
 <!--            AND status = 1-->
 <!--        </where>-->
 <!--    </sql>-->
+<!--    <sql id="query_guide_where">-->
+<!--        <where>-->
+<!--            <if test="keyword != null and keyword != ''">-->
+<!--                AND (title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%'))-->
+<!--            </if>-->
+<!--             标签筛选 -->
+<!--            <if test="tags != null and tags.size() > 0">-->
+<!--                AND (-->
+<!--                <foreach collection="tags" item="tag" separator=" OR ">-->
+<!--                    FIND_IN_SET(#{tag}, tags) > 0-->
+<!--                </foreach>-->
+<!--                )-->
+<!--            </if>-->
+<!--            -->
+<!--            AND status = 1-->
+<!--        </where>-->
+<!--    </sql>-->
+    <!-- 动态SQL：用于攻略列表查询的条件 -->
+<!--    <sql id="query_guide_where">-->
+<!--        <where>-->
+<!--            <if test="keyword != null and keyword != ''">-->
+<!--                AND (g.title LIKE CONCAT('%', #{keyword}, '%') OR g.content LIKE CONCAT('%', #{keyword}, '%'))-->
+<!--            </if>-->
+<!--            &lt;!&ndash; 标签筛选 &ndash;&gt;-->
+<!--            <if test="tags != null and tags.size() > 0">-->
+<!--                AND (-->
+<!--                <foreach collection="tags" item="tag" separator=" OR ">-->
+<!--                    FIND_IN_SET(#{tag}, g.tags) > 0-->
+<!--                </foreach>-->
+<!--                )-->
+<!--            </if>-->
+<!--            AND g.status = 1  &lt;!&ndash; 添加表别名 g &ndash;&gt;-->
+<!--        </where>-->
+<!--    </sql>-->
     <sql id="query_guide_where">
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%'))
+                AND (g.title LIKE CONCAT('%', #{keyword}, '%') OR g.content LIKE CONCAT('%', #{keyword}, '%'))
             </if>
-            <!-- 标签筛选 -->
+            <!-- 标签筛选 (使用 guide_tags 表和 tags 表) -->
             <if test="tags != null and tags.size() > 0">
-                AND (
-                <foreach collection="tags" item="tag" separator=" OR ">
-                    FIND_IN_SET(#{tag}, tags) > 0
+                AND EXISTS (
+                SELECT 1
+                FROM guide_tags gt
+                JOIN tags t ON gt.tag_id = t.id
+                WHERE gt.guide_id = g.id
+                AND t.name IN
+                <foreach item="tag" collection="tags" open="(" separator="," close=")">
+                    #{tag}
                 </foreach>
                 )
             </if>
-            AND status = 1
+            AND g.status = 1
         </where>
     </sql>
     <!--列表查询-->
     <select id="list" resultType="top.aetheria.travelguideplatform.guide.entity.Guide">
-        SELECT *
-        FROM guides
+        SELECT g.*
+        FROM guides g
         <include refid="query_guide_where"/>
         <if test="sortBy != null and sortBy != ''">
             ORDER BY
             <choose>
-                <when test="sortBy == 'createTime'">create_time</when>
-                <when test="sortBy == 'updateTime'">update_time</when>
-                <when test="sortBy == 'viewCount'">view_count</when>
-                <when test="sortBy == 'likeCount'">like_count</when>
-                <when test="sortBy == 'commentCount'">comment_count</when>
-                <otherwise>create_time</otherwise>
+                <when test="sortBy == 'createTime'">g.create_time</when>
+                <when test="sortBy == 'updateTime'">g.update_time</when>
+                <when test="sortBy == 'viewCount'">g.view_count</when>
+                <when test="sortBy == 'likeCount'">g.like_count</when>
+                <when test="sortBy == 'commentCount'">g.comment_count</when>
+                <otherwise>g.create_time</otherwise>
             </choose>
             <if test="sortOrder != null and sortOrder != ''">
                 <choose>
@@ -73,7 +112,7 @@
     <!--查询总数-->
     <select id="count" resultType="java.lang.Long">
         SELECT count(*)
-        FROM guides
+        FROM guides g
         <include refid="query_guide_where"/>
     </select>
 </mapper>

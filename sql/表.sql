@@ -213,3 +213,37 @@ CREATE TABLE `private_messages` (
                                     FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`),
                                     FOREIGN KEY (`receiver_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 论坛主题表
+CREATE TABLE `topics` (
+                          `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                          `user_id` BIGINT UNSIGNED NOT NULL,
+                          `title` VARCHAR(255) NOT NULL,
+                          `content` TEXT NOT NULL,
+                          `create_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                          `update_time` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                          `view_count` INT UNSIGNED NOT NULL DEFAULT 0,
+                          `reply_count` INT UNSIGNED NOT NULL DEFAULT 0,
+                          `last_reply_user_id` BIGINT UNSIGNED DEFAULT NULL,  -- 最后一个回复的用户ID
+                          `last_reply_time` TIMESTAMP NULL DEFAULT NULL,     -- 最后回复时间
+                          PRIMARY KEY (`id`),
+                          KEY `idx_user_id` (`user_id`),
+                          FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 论坛回复表
+CREATE TABLE `replies` (
+                           `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                           `topic_id` BIGINT UNSIGNED NOT NULL,
+                           `user_id` BIGINT UNSIGNED NOT NULL,
+                           `content` TEXT NOT NULL,
+                           `create_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                           `parent_reply_id` BIGINT UNSIGNED DEFAULT NULL, -- 父回复ID（用于回复的回复）
+                           PRIMARY KEY (`id`),
+                           KEY `idx_topic_id` (`topic_id`),
+                           KEY `idx_user_id` (`user_id`),
+                           KEY `idx_parent_reply_id` (`parent_reply_id`),
+                           FOREIGN KEY (`topic_id`) REFERENCES `topics` (`id`) ON DELETE CASCADE,
+                           FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
+                           FOREIGN KEY (`parent_reply_id`) REFERENCES `replies` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

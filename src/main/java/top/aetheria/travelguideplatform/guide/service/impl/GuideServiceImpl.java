@@ -95,11 +95,12 @@ public class GuideServiceImpl implements GuideService {
         }
         GuideInfoDTO guideInfoDTO = new GuideInfoDTO();
         BeanUtils.copyProperties(guide, guideInfoDTO);
-
-        if (guide.getTags() != null && !guide.getTags().isEmpty()) {
-            List<String> tagList = Arrays.asList(guide.getTags().split("\\s*,\\s*")); // 正则表达式分割，并去除多余空格
-            guideInfoDTO.setTags(tagList);
-        }
+        List<Tag> tags = tagMapper.findByGuideId(id);
+        guideInfoDTO.setTags(tags.stream().map(Tag::getName).collect(Collectors.toList()));
+//        if (guide.getTags() != null && !guide.getTags().isEmpty()) {
+//            List<String> tagList = Arrays.asList(guide.getTags().split("\\s*,\\s*")); // 正则表达式分割，并去除多余空格
+//            guideInfoDTO.setTags(tagList);
+//        }
 //        System.out.println(guideInfoDTO.getTags());
         //查询作者信息
         User user = userMapper.findById(guide.getUserId());
@@ -178,7 +179,6 @@ public class GuideServiceImpl implements GuideService {
     public PageResult<Guide> list(GuideListDTO guideListDTO) {
         // 设置分页参数
         PageHelper.startPage(guideListDTO.getPage(), guideListDTO.getPageSize());
-
         // 执行查询
         List<Guide> guides = guideMapper.list(guideListDTO);
 

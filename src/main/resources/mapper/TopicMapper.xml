@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="top.aetheria.travelguideplatform.topic.mapper.TopicMapper">
+    <sql id="query_topic_where">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </sql>
+
+    <select id = "list" resultType="top.aetheria.travelguideplatform.topic.entity.Topic">
+        select * from topics
+        <include refid="query_topic_where"></include>
+        <if test="sortBy != null and sortBy != ''">
+            ORDER BY
+            <choose>
+                <when test="sortBy == 'createTime'">create_time</when>
+                <when test="sortBy == 'updateTime'">update_time</when>
+                <when test="sortBy == 'viewCount'">view_count</when>
+                <when test="sortBy == 'replyCount'">reply_count</when>
+                <when test="sortBy == 'lastReplyTime'">last_reply_time</when>
+                <otherwise>create_time</otherwise>
+            </choose>
+            <if test="sortOrder != null and sortOrder != ''">
+                <choose>
+                    <when test="sortOrder == 'asc'">ASC</when>
+                    <when test="sortOrder == 'desc'">DESC</when>
+                    <otherwise>DESC</otherwise>
+                </choose>
+            </if>
+        </if>
+    </select>
+    <select id="count" resultType="java.lang.Long">
+        select count(*) from topics
+        <include refid="query_topic_where"></include>
+    </select>
+</mapper>

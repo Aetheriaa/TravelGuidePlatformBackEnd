@@ -76,8 +76,6 @@ public class GuideController {
         }
         Long userId = jwtUtils.getUserIdFromToken(token);
 
-        // 检查权限（例如，只能删除自己的攻略，或者管理员可以删除）
-        // 这里只是简单示例，实际应用中需要根据业务规则进行更复杂的权限控制
         GuideInfoDTO guide = guideService.getById(id, userId);
         if (guide == null) {
             return Result.error("该攻略不存在");
@@ -207,5 +205,6 @@ public class GuideController {
         guideService.recordGuideView(userId, guideId);
         return Result.success();
     }
+
 
 }
