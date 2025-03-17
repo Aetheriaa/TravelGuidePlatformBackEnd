@@ -2,6 +2,7 @@ package top.aetheria.travelguideplatform.topic.service.impl;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import top.aetheria.travelguideplatform.topic.service.TopicService;
 import top.aetheria.travelguideplatform.user.mapper.UserMapper;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -128,17 +130,28 @@ public class TopicServiceImpl implements TopicService {
     }
 
     @Override
-    public PageResult<Topic> listTopics(TopicListDTO topicListDTO) {
+    public PageResult<TopicInfoDTO> listTopics(TopicListDTO topicListDTO) {
         // 1. 设置分页参数
         PageHelper.startPage(topicListDTO.getPage(), topicListDTO.getPageSize());
 
         // 2. 执行查询
         List<Topic> topics = topicMapper.list(topicListDTO);
 
-        // 3. 获取分页结果
-        Page<Topic> page = (Page<Topic>) topics;
+        // 3. 获取 PageHelper 的分页结果信息
+        PageInfo<Topic> pageInfo = new PageInfo<>(topics);
+        List<TopicInfoDTO> topicInfos = new ArrayList<>();
+        for (var topic : topics) {
+            topicInfos.add(getTopicById(topic.getId()));
+        }
 
         // 4. 封装 PageResult
-        return new PageResult<>(page.getTotal(), page.getResult());
+        return new PageResult<>(pageInfo.getTotal(), topicInfos);
     }
+
+
+    public void addViewCount(Long id) {
+        // 1. 增加浏览次数
+        topicMapper.incrementViewCount(id);
+    }
+
 }

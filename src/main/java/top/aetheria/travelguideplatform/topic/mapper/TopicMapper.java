@@ -1,6 +1,7 @@
 package top.aetheria.travelguideplatform.topic.mapper;
 
 import org.apache.ibatis.annotations.*;
+import top.aetheria.travelguideplatform.topic.dto.TopicInfoDTO;
 import top.aetheria.travelguideplatform.topic.dto.TopicListDTO;
 import top.aetheria.travelguideplatform.topic.entity.Topic;
 

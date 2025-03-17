@@ -17,5 +17,7 @@ public interface TopicService {
 
     void deleteTopic(Long userId, Long topicId);
 
-    PageResult<Topic> listTopics(TopicListDTO topicListDTO);
+    PageResult<TopicInfoDTO> listTopics(TopicListDTO topicListDTO);
+
+    public void addViewCount(Long id);
 }

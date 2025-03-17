@@ -1,6 +1,5 @@
 package top.aetheria.travelguideplatform.topic.controller;
 
-import com.github.pagehelper.Page;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
@@ -16,11 +15,13 @@ import top.aetheria.travelguideplatform.topic.dto.TopicUpdateDTO;
 import top.aetheria.travelguideplatform.topic.entity.Topic;
 import top.aetheria.travelguideplatform.topic.service.TopicService;
 
-import java.util.List;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 @RestController
 @RequestMapping("/api/v1/topics") // 注意这里的 URL 前缀
 public class TopicController {
+
+    private static final Logger logger = LoggerFactory.getLogger(TopicController.class);
 
     @Autowired
     private TopicService topicService;
@@ -47,7 +48,7 @@ public class TopicController {
     @GetMapping("/{id}")
     public Result<TopicInfoDTO> getTopicById(@PathVariable Long id) {
         TopicInfoDTO topic = topicService.getTopicById(id);
-        //增加浏览次数,暂时不做
+        topicService.addViewCount(topic.getId());
         return Result.success(topic);
     }
 
@@ -84,9 +85,14 @@ public class TopicController {
     }
 
     // 获取主题列表
+//    @GetMapping
+//    public Result<PageResult<Topic>> listTopics(TopicListDTO topicListDTO) {
+//        PageResult<Topic> pageResult = topicService.listTopics(topicListDTO);
+//        return Result.success(pageResult);
+//    }
     @GetMapping
-    public Result<PageResult<Topic>> listTopics(TopicListDTO topicListDTO) {
-        PageResult<Topic> pageResult = topicService.listTopics(topicListDTO);
+    public Result<PageResult<TopicInfoDTO>> listTopics(TopicListDTO topicListDTO) {
+        PageResult<TopicInfoDTO> pageResult = topicService.listTopics(topicListDTO);
         return Result.success(pageResult);
     }
 }
