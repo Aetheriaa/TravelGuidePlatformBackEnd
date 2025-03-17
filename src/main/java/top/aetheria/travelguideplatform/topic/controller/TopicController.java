@@ -1,6 +1,8 @@
 package top.aetheria.travelguideplatform.topic.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -15,12 +17,10 @@ import top.aetheria.travelguideplatform.topic.dto.TopicUpdateDTO;
 import top.aetheria.travelguideplatform.topic.entity.Topic;
 import top.aetheria.travelguideplatform.topic.service.TopicService;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 @RestController
 @RequestMapping("/api/v1/topics") // 注意这里的 URL 前缀
 public class TopicController {
-
+    // 添加日志
     private static final Logger logger = LoggerFactory.getLogger(TopicController.class);
 
     @Autowired
@@ -37,18 +37,23 @@ public class TopicController {
             token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
         }
         Long userId = jwtUtils.getUserIdFromToken(token);
+        // 添加日志
+        logger.info("Creating topic. userId: {}, DTO: {}", userId, createDTO);
         if(userId == null){
             return Result.error(401,"请先登录");
         }
         Topic topic = topicService.createTopic(userId, createDTO);
+        logger.info("Topic created with ID: {}", topic.getId()); // 假设你的 Topic 类有一个 getId() 方法
         return Result.success(topic);
     }
 
     // 获取主题详情
     @GetMapping("/{id}")
     public Result<TopicInfoDTO> getTopicById(@PathVariable Long id) {
+        logger.info("Getting topic by ID: {}", id);
         TopicInfoDTO topic = topicService.getTopicById(id);
-        topicService.addViewCount(topic.getId());
+        //增加浏览次数,暂时不做
+        logger.info("Returning topic: {}", topic);
         return Result.success(topic);
     }
 
@@ -61,6 +66,7 @@ public class TopicController {
             token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
         }
         Long userId = jwtUtils.getUserIdFromToken(token);
+        logger.info("Updating topic. userId: {}, DTO: {}", userId, updateDTO);
         if(userId == null){
             return Result.error(401,"请先登录");
         }
@@ -77,6 +83,7 @@ public class TopicController {
             token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
         }
         Long userId = jwtUtils.getUserIdFromToken(token);
+        logger.info("Deleting topic. userId: {}, topicId: {}", userId, id);
         if(userId == null){
             return Result.error(401,"请先登录");
         }
@@ -85,14 +92,11 @@ public class TopicController {
     }
 
     // 获取主题列表
-//    @GetMapping
-//    public Result<PageResult<Topic>> listTopics(TopicListDTO topicListDTO) {
-//        PageResult<Topic> pageResult = topicService.listTopics(topicListDTO);
-//        return Result.success(pageResult);
-//    }
     @GetMapping
     public Result<PageResult<TopicInfoDTO>> listTopics(TopicListDTO topicListDTO) {
+        logger.info("Listing topics with DTO: {}", topicListDTO);
         PageResult<TopicInfoDTO> pageResult = topicService.listTopics(topicListDTO);
+        logger.info("Returned {} topics.", pageResult.getTotal());
         return Result.success(pageResult);
     }
 }

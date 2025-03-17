@@ -3,9 +3,13 @@ package top.aetheria.travelguideplatform.user.service.impl;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
-import org.springframework.beans.BeanWrapper;
-import org.springframework.beans.BeanWrapperImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.DigestUtils;
 import top.aetheria.travelguideplatform.common.constant.AppConstants;
 import top.aetheria.travelguideplatform.common.exception.BusinessException;
 import top.aetheria.travelguideplatform.common.utils.JwtUtils;
@@ -17,32 +21,31 @@ import top.aetheria.travelguideplatform.guide.mapper.FavoriteMapper;
 import top.aetheria.travelguideplatform.guide.mapper.GuideMapper;
 import top.aetheria.travelguideplatform.guide.mapper.LikeMapper;
 import top.aetheria.travelguideplatform.guide.mapper.TagMapper;
+import top.aetheria.travelguideplatform.user.mapper.UserGuideHistoryMapper;
 import top.aetheria.travelguideplatform.user.dto.UserLoginDTO;
 import top.aetheria.travelguideplatform.user.dto.UserRegisterDTO;
 import top.aetheria.travelguideplatform.user.dto.UserUpdateDTO;
 import top.aetheria.travelguideplatform.user.entity.User;
-import top.aetheria.travelguideplatform.user.mapper.UserGuideHistoryMapper;
 import top.aetheria.travelguideplatform.user.mapper.UserMapper;
 import top.aetheria.travelguideplatform.user.service.UserService;
 import top.aetheria.travelguideplatform.user.vo.LoginVO;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.util.DigestUtils;
+
 import java.beans.FeatureDescriptor;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.time.format.DateTimeFormatter;
-
-
+import  org.springframework.beans.BeanWrapper;
+import org.springframework.beans.BeanWrapperImpl;
 @Service
 public class UserServiceImpl implements UserService {
-
+    private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
     @Autowired
     private UserMapper userMapper;
 
@@ -91,6 +94,7 @@ public class UserServiceImpl implements UserService {
 
         // 6. 插入数据库
         userMapper.insert(user);
+        logger.info("Registered new user: {}", user.getUsername()); // 记录新用户注册
     }
 
     @Override
@@ -100,12 +104,14 @@ public class UserServiceImpl implements UserService {
 
         // 2. 检查用户是否存在
         if (user == null) {
+            logger.warn("Login attempt with invalid username/email: {}", userLoginDTO.getUsernameOrEmail());
             throw new BusinessException(400,"用户名或密码错误");
         }
 
         // 3. 检查密码是否正确
         String hashedPassword = DigestUtils.md5DigestAsHex(userLoginDTO.getPassword().getBytes());
         if (!hashedPassword.equals(user.getPassword())) {
+            logger.warn("Login attempt with incorrect password for user: {}", user.getUsername());
             throw new BusinessException(400,"用户名或密码错误");
         }
         //更新最后登录时间
@@ -119,6 +125,7 @@ public class UserServiceImpl implements UserService {
         loginVO.setId(user.getId());
         loginVO.setUsername(user.getUsername());
         loginVO.setToken(token);
+        logger.info("User logged in: {}", user.getUsername());
         return loginVO;
 
     }
@@ -126,8 +133,10 @@ public class UserServiceImpl implements UserService {
     public User getById(Long id){
         User user = userMapper.findById(id);
         if (user == null){
+            logger.warn("Attempt to get non-existent user with ID: {}", id);
             throw new BusinessException(404,"用户不存在");
         }
+        logger.info("user:{}",user);
         return  user;
     }
 
@@ -136,6 +145,7 @@ public class UserServiceImpl implements UserService {
         // 1. 查询用户
         User user = userMapper.findById(id);
         if(user == null) {
+            logger.warn("Attempt to update non-existent user with ID: {}", id);
             throw new BusinessException(404, "用户不存在");
         }
         // 2. 更新字段，仅更新不为null的字段
@@ -143,6 +153,7 @@ public class UserServiceImpl implements UserService {
 
         // 3. 更新到数据库
         userMapper.update(user);
+        logger.info("Updated user with ID: {}", id);
     }
 
     // 工具方法：获取对象中为null的属性名
@@ -153,21 +164,22 @@ public class UserServiceImpl implements UserService {
                 .filter(propertyName -> wrappedSource.getPropertyValue(propertyName) == null)
                 .toArray(String[]::new);
     }
-
+//    @Override
+//    public List<String> getUserTags(Long userId) {
+//        logger.info("Getting tags for user ID: {}", userId);
+//        List<String> tags = userMapper.findUserTags(userId);
+//        logger.info("Returning {} tags for user ID: {}", tags.size(), userId);
+//        return  tags;
+//    }
 
     @Override
     public PageResult<GuideInfoDTO> getGuideHistory(Long userId, int page, int pageSize) {
-        // 使用 PageHelper 设置分页参数
-        // 计算 offset 和 limit
-        int offset = (page - 1) * pageSize;
-        int limit = pageSize;
 
         // 查询浏览历史数据
-        List<Map<String, Object>> historyEntries = userGuideHistoryMapper.findRecentGuidesWithViewTime(userId, offset, limit);
-        // 查询总数
-        Long total = (long) historyEntries.size();
+        PageHelper.startPage(page,pageSize);
+        List<Map<String, Object>> historyEntries = userGuideHistoryMapper.findRecentGuidesWithViewTime(userId, page, pageSize);
+        Page<Map<String, Object>> pageInfo = (Page<Map<String, Object>>) historyEntries;
         // 将浏览历史数据转换为 GuideInfoDTO 列表
-
         List<GuideInfoDTO> guideInfoDTOList = historyEntries.stream()
                 .map(entry -> {
                     Long guideId = ((Number) entry.get("guide_id")).longValue();
@@ -196,9 +208,9 @@ public class UserServiceImpl implements UserService {
                 })
                 .filter(Objects::nonNull) // 过滤掉 null 值
                 .collect(Collectors.toList());
-
+        logger.info("guideInfoDTOList.size:{}",guideInfoDTOList.size());
         // 返回分页结果
-        return new PageResult<>(total, guideInfoDTOList);
+        return new PageResult<>(pageInfo.getTotal(), guideInfoDTOList);
     }
 
     @Override
@@ -219,10 +231,11 @@ public class UserServiceImpl implements UserService {
                 guideInfoDTO.setAuthorAvatar(user.getAvatar());
             }
             // 查询tags
-//            List<Tag> tags = tagMapper.findTagsByGuideId(guide.getId());
-//            guideInfoDTO.setTags(tags.stream().map(Tag::getName).collect(Collectors.toList()));
+            List<Tag> tags = tagMapper.findByGuideId(guide.getId());
+            guideInfoDTO.setTags(tags.stream().map(Tag::getName).collect(Collectors.toList()));
             return guideInfoDTO;
         }).collect(Collectors.toList());
+        logger.info("Retrieved {} liked guides for user ID: {}", guideInfoDTOS.size(), userId);
         return new PageResult<>(pageInfo.getTotal(),guideInfoDTOS);
     }
 
@@ -235,7 +248,7 @@ public class UserServiceImpl implements UserService {
         List<Guide> guides = favoriteMapper.findFavoriteGuideIdsByUserId(userId);
         // 获取分页信息
         PageInfo<Guide> pageInfo = new PageInfo<>(guides);
-        List<GuideInfoDTO> guideInfoDTOS = guides.stream().map(guide -> {
+        List<GuideInfoDTO> guideInfoDTOS =  guides.stream().map(guide->{
             GuideInfoDTO guideInfoDTO = new GuideInfoDTO();
             BeanUtils.copyProperties(guide,guideInfoDTO);
             // 查询作者信息
@@ -245,10 +258,11 @@ public class UserServiceImpl implements UserService {
                 guideInfoDTO.setAuthorAvatar(user.getAvatar());
             }
             // 查询tags
-//            List<Tag> tags = tagMapper.findTagsByGuideId(guide.getId());
-//            guideInfoDTO.setTags(tags.stream().map(Tag::getName).collect(Collectors.toList()));
+            List<Tag> tags = tagMapper.findByGuideId(guide.getId());
+            guideInfoDTO.setTags(tags.stream().map(Tag::getName).collect(Collectors.toList()));
             return guideInfoDTO;
         }).collect(Collectors.toList());
+        logger.info("Retrieved {} favorite guides for user ID: {}", guideInfoDTOS.size(), userId);
         return new PageResult<>(pageInfo.getTotal(),guideInfoDTOS);
     }
 
@@ -266,6 +280,7 @@ public class UserServiceImpl implements UserService {
         }
 
         userMapper.insertFollow(followerId, followingId);
+        logger.info("User {} followed user {}.", followerId, followingId);
     }
 
     @Override
@@ -277,15 +292,18 @@ public class UserServiceImpl implements UserService {
         // 检查用户是否存在 (省略)
 
         userMapper.deleteFollow(followerId, followingId);
+        logger.info("User {} unfollowed user {}.", followerId, followingId);
     }
 
     @Override
     public List<User> getFollowingList(Long userId) {
+        logger.info("Getting following list for user ID: {}", userId);
         return userMapper.findFollowing(userId);
     }
 
     @Override
     public List<User> getFollowerList(Long userId) {
+        logger.info("Getting followers list for user ID: {}", userId);
         return userMapper.findFollowers(userId);
     }
     @Override
@@ -295,11 +313,13 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public int getFollowingCount(Long userId) {
+        logger.info("Getting following count for user ID: {}", userId);
         return userMapper.getFollowingCount(userId);
     }
 
     @Override
     public int getFollowerCount(Long userId) {
+        logger.info("Getting followers count for user ID: {}", userId);
         return userMapper.getFollowerCount(userId);
     }
 

@@ -2,6 +2,8 @@ package top.aetheria.travelguideplatform.product.service.impl;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,7 +25,7 @@ import java.util.List;
 
 @Service
 public class ProductServiceImpl implements ProductService {
-
+    private static final Logger logger = LoggerFactory.getLogger(ProductServiceImpl.class);
     @Autowired
     private ProductMapper productMapper;
 
@@ -39,12 +41,14 @@ public class ProductServiceImpl implements ProductService {
         product.setStatus(1); // 默认上架状态
         product.setUserId(userId);  // 设置发布者 ID
         productMapper.insert(product);
+        logger.info("Created product: {}", product);
         return product;
     }
     @Override
     public ProductInfoDTO getById(Long id) {
         Product product = productMapper.findById(id);
         if (product == null) {
+            logger.warn("Product with ID: {} not found", id);
             throw new BusinessException(404, "产品不存在");
         }
         ProductInfoDTO productInfoDTO = new ProductInfoDTO();
@@ -55,6 +59,7 @@ public class ProductServiceImpl implements ProductService {
             productInfoDTO.setUserId(user.getId());
             // 可以根据需要设置其他用户信息，例如用户名、头像等
         }
+        logger.info("Returning product info DTO for ID: {}", id);
         return productInfoDTO;
     }
     @Override
@@ -62,10 +67,12 @@ public class ProductServiceImpl implements ProductService {
     public void update(ProductUpdateDTO productUpdateDTO) {
         Product product = productMapper.findById(productUpdateDTO.getId());
         if (product == null) {
+            logger.warn("Attempt to update non-existent product with ID: {}", productUpdateDTO.getId());
             throw new BusinessException(404, "产品不存在");
         }
         BeanUtils.copyProperties(productUpdateDTO, product);
         productMapper.update(product);
+        logger.info("Updated product with ID: {}", product.getId());
     }
 
     @Override
@@ -73,9 +80,11 @@ public class ProductServiceImpl implements ProductService {
     public void delete(Long id) {
         Product product = productMapper.findById(id);
         if(product == null){
+            logger.warn("Attempt to delete non-existent product with ID: {}", id);
             throw new BusinessException(404,"产品不存在");
         }
         productMapper.delete(id);
+        logger.info("Deleted product with ID: {}", id);
     }
 
     @Override
@@ -86,7 +95,7 @@ public class ProductServiceImpl implements ProductService {
 
         // 执行查询
         List<Product> guides = productMapper.list(productListDTO);
-
+        logger.info("查询数量：{}",guides.size());
         // 获取分页结果
         Page<Product> page = (Page<Product>) guides;
 
@@ -96,7 +105,12 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public void setStatus(Long id, Integer status){
         Product product = productMapper.findById(id);
+        if (product == null) {
+            logger.warn("Attempt to change status of non-existent product with ID: {}", id);
+            throw new BusinessException(404, "产品不存在");
+        }
         product.setStatus(status);
         productMapper.update(product);
+        logger.info("Changed status of product with ID: {} to {}", id,status);
     }
 }

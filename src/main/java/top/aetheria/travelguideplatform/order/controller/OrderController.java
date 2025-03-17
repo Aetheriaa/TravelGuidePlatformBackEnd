@@ -1,6 +1,8 @@
 package top.aetheria.travelguideplatform.order.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -18,11 +20,14 @@ import top.aetheria.travelguideplatform.order.service.OrderService;
 @RequestMapping("/api/v1/orders")
 public class OrderController {
 
+    private static final Logger logger = LoggerFactory.getLogger(OrderController.class);
+
     @Autowired
     private OrderService orderService;
 
     @Autowired
     private JwtUtils jwtUtils;
+
     @PostMapping
     public Result<Order> createOrder(@Validated @RequestBody OrderCreateDTO orderCreateDTO, HttpServletRequest request) {
         // 从请求头中获取token
@@ -31,15 +36,19 @@ public class OrderController {
             token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
         }
         Long userId = jwtUtils.getUserIdFromToken(token);
-        if(userId == null){
-            return Result.error(401,"请先登录");
+        logger.info("Creating order. userId: {}, DTO: {}", userId, orderCreateDTO);
+        if (userId == null) {
+            logger.warn("Attempt to create order without logging in.");
+            return Result.error(401, "请先登录");
         }
         Order order = orderService.createOrder(userId, orderCreateDTO);
+        logger.info("Order created: {}", order);
         return Result.success(order);
     }
 
     @GetMapping("/{id}")
-    public Result<OrderInfoDTO> getOrderById(@PathVariable Long id,HttpServletRequest request) {
+    public Result<OrderInfoDTO> getOrderById(@PathVariable Long id, HttpServletRequest request) {
+        logger.info("Getting order by ID: {}", id);
         String token = request.getHeader(AppConstants.JWT_HEADER_KEY);
         if (token != null && token.startsWith(AppConstants.JWT_TOKEN_PREFIX)) {
             token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
@@ -49,9 +58,10 @@ public class OrderController {
             return Result.error(401,"请先登录");
         }
         OrderInfoDTO order = orderService.getOrderById(id);
+        logger.info("Returning order: {}", order);
         // 权限校验
-        if(!order.getUserId().equals(userId)){
-            return Result.error(403,"无权限");
+        if (!order.getUserId().equals(userId)) {
+            return Result.error(403, "无权限");
         }
         return Result.success(order);
     }
@@ -67,7 +77,9 @@ public class OrderController {
         if(userId == null){
             return Result.error(401,"请先登录");
         }
-        PageResult<OrderInfoDTO> pageResult = orderService.listOrders(orderListDTO,userId);
+        logger.info("Listing orders for userId: {} with DTO: {}", userId, orderListDTO);
+        PageResult<OrderInfoDTO> pageResult = orderService.listOrders(orderListDTO, userId);
+        logger.info("Retrieved {} orders for user ID: {}", pageResult.getTotal(), userId);
         return Result.success(pageResult);
     }
 
@@ -82,7 +94,8 @@ public class OrderController {
         if(userId == null){
             return Result.error(401,"请先登录");
         }
-        orderService.cancelOrder(id,userId);
+        logger.info("Cancelling order. userId: {}, orderId: {}", userId, id);
+        orderService.cancelOrder(id, userId);
         return Result.success();
     }
 
@@ -94,16 +107,19 @@ public class OrderController {
             token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
         }
         Long userId = jwtUtils.getUserIdFromToken(token);
-//        System.out.println("qqqqq");
-        if(userId == null){
-            return Result.error(401,"请先登录");
+        logger.info("Attempting to pay for order. userId: {}, orderId: {}", userId, id);
+        if (userId == null) {
+            logger.warn("Attempt to pay order without logging in.");
+            return Result.error(401, "请先登录");
         }
         // 验证权限, 只有订单所有者才能支付
         OrderInfoDTO order = orderService.getOrderById(id);
         if (!order.getUserId().equals(userId)) {
+            logger.warn("User {} attempted to pay for order {} without permission.", userId, id);
             return Result.error(403, "无权限支付此订单");
         }
         orderService.payOrder(id); // 这里假设支付成功
+        logger.info("Order with ID {} marked as paid.", id);
         return Result.success();
     }
 }

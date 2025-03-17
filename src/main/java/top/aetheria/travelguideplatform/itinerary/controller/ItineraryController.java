@@ -1,6 +1,8 @@
 package top.aetheria.travelguideplatform.itinerary.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +21,8 @@ import top.aetheria.travelguideplatform.itinerary.service.ItineraryService;
 @RequestMapping("/api/v1/itineraries")
 public class ItineraryController {
 
+    private static final Logger logger = LoggerFactory.getLogger(ItineraryController.class);
+
     @Autowired
     private ItineraryService itineraryService;
 
@@ -33,13 +37,17 @@ public class ItineraryController {
             token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
         }
         Long userId = jwtUtils.getUserIdFromToken(token);
+        logger.info("Creating itinerary. userId: {}, DTO: {}", userId, itineraryCreateDTO);
         Itinerary itinerary = itineraryService.create(userId, itineraryCreateDTO);
+        logger.info("Itinerary created with ID: {}", itinerary.getId());
         return Result.success(itinerary);
     }
 
     @GetMapping("/{id}")
     public Result<ItineraryInfoDTO> getById(@PathVariable Long id) {
+        logger.info("Getting itinerary by ID: {}", id);
         ItineraryInfoDTO itinerary = itineraryService.getById(id);
+        logger.info("Returning itinerary: {}", itinerary);
         return Result.success(itinerary);
     }
 
@@ -51,6 +59,7 @@ public class ItineraryController {
             token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
         }
         Long userId = jwtUtils.getUserIdFromToken(token);
+        logger.info("Updating itinerary. userId: {}, DTO: {}", userId, itineraryUpdateDTO);
         itineraryService.update(itineraryUpdateDTO,userId);
         return Result.success();
     }
@@ -63,12 +72,21 @@ public class ItineraryController {
             token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
         }
         Long userId = jwtUtils.getUserIdFromToken(token);
+        logger.info("Deleting itinerary. userId: {}, itineraryId: {}", userId, id);
         itineraryService.delete(id,userId);
         return Result.success();
     }
 
     @GetMapping
-    public Result<PageResult<Itinerary>> list(ItineraryListDTO itineraryListDTO) {
+    public Result<PageResult<Itinerary>> list(ItineraryListDTO itineraryListDTO,HttpServletRequest request) {
+        // 从请求头中获取token
+        String token = request.getHeader(AppConstants.JWT_HEADER_KEY);
+        if (token != null && token.startsWith(AppConstants.JWT_TOKEN_PREFIX)) {
+            token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
+        }
+        Long userId = jwtUtils.getUserIdFromToken(token);
+
+        logger.info("Listing itineraries with DTO: {}", itineraryListDTO);
         PageResult<Itinerary> pageResult = itineraryService.list(itineraryListDTO);
         return Result.success(pageResult);
     }

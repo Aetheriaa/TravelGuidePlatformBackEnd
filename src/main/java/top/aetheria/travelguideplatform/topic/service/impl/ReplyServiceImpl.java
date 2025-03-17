@@ -1,5 +1,7 @@
 package top.aetheria.travelguideplatform.topic.service.impl;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class ReplyServiceImpl implements ReplyService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ReplyServiceImpl.class);
 
     @Autowired
     private ReplyMapper replyMapper;
@@ -44,6 +48,7 @@ public class ReplyServiceImpl implements ReplyService {
 
         // 3. 插入数据库
         replyMapper.insert(reply);
+        logger.info("Created reply with ID: {} for topicId: {} by userId: {}", reply.getId(), reply.getTopicId(), userId);
 
         // 4. 更新主题的最后回复信息和回复数
         topicMapper.updateLastReply(createDTO.getTopicId(), userId, LocalDateTime.now());
@@ -55,7 +60,7 @@ public class ReplyServiceImpl implements ReplyService {
     public List<ReplyInfoDTO> getRepliesByTopicId(Long topicId) {
         // 1. 查询回复列表
         List<Reply> replies = replyMapper.findByTopicId(topicId);
-
+        logger.debug("Found {} replies for topicId: {}", replies.size(), topicId);
         // 2. 转换为 DTO 列表
         return replies.stream()
                 .map(reply -> {
@@ -91,15 +96,18 @@ public class ReplyServiceImpl implements ReplyService {
         // 1. 查询回复信息
         Reply reply = replyMapper.findById(replyId);
         if (reply == null) {
+            logger.warn("Attempt to delete non-existent reply with ID: {}", replyId);
             throw new BusinessException(404, "回复不存在");
         }
 
         // 2. 检查权限 (只有发布者才能删除)
         if (!reply.getUserId().equals(userId)) {
+            logger.warn("User {} attempted to delete reply {} without permission.", userId, replyId);
             throw new BusinessException(403, "无权限删除此回复");
         }
         // 3. 删除回复
         replyMapper.delete(replyId);
+        logger.info("Deleted reply with ID: {}", replyId);
         // TODO: 检查是否需要更新最后回复
     }
 }

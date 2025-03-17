@@ -1,5 +1,8 @@
 package top.aetheria.travelguideplatform.comment.service.impl;
 
+// ... 其他导入 ...
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import top.aetheria.travelguideplatform.comment.dto.CommentCreateDTO;
 import top.aetheria.travelguideplatform.comment.dto.CommentInfoDTO;
 import top.aetheria.travelguideplatform.comment.dto.CommentUpdateDTO;
@@ -14,6 +17,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +25,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class CommentServiceImpl implements CommentService {
+
+    private static final Logger logger = LoggerFactory.getLogger(CommentServiceImpl.class);
 
     @Autowired
     private CommentMapper commentMapper;
@@ -37,17 +43,22 @@ public class CommentServiceImpl implements CommentService {
         comment.setCreateTime(LocalDateTime.now());
         comment.setStatus(AppConstants.GUIDE_STATUS_PUBLISHED);
         commentMapper.insert(comment);
+        logger.info("Created comment with ID: {} for guideId: {} by userId: {}", comment.getId(), comment.getGuideId(), userId);
     }
 
     @Override
     public List<CommentInfoDTO> getCommentsByGuideId(Long guideId) {
         // 1. 查询所有一级评论
         List<Comment> topLevelComments = commentMapper.findAllByGuideId(guideId);
+        logger.debug("Found {} top-level comments for guideId: {}", topLevelComments.size(), guideId);
 
         // 2. 转换为 DTO，并递归构建回复树
-        return topLevelComments.stream()
+        List<CommentInfoDTO> commentInfoDTOs = topLevelComments.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
+
+        logger.debug("Returning {} comments (including replies) for guideId: {}", commentInfoDTOs.size(), guideId);
+        return commentInfoDTOs;
     }
 
     // 将 Comment 转换为 CommentInfoDTO，并递归构建回复树
@@ -56,19 +67,31 @@ public class CommentServiceImpl implements CommentService {
         BeanUtils.copyProperties(comment, dto);
 
         // 设置用户信息
-        User user = userMapper.findById(comment.getUserId());
-        if (user != null) {
-            dto.setUsername(user.getUsername());
-            dto.setUserAvatar(user.getAvatar());
+        User user = null;
+        try {
+            user = userMapper.findById(comment.getUserId());
+            if (user != null) {
+                dto.setUsername(user.getUsername());
+                dto.setUserAvatar(user.getAvatar());
+            }
+        } catch (Exception e) {
+            logger.error("Error finding user with ID: {}", comment.getUserId(), e);
+            // 可以选择抛出异常，或者设置默认值
         }
+
         // 如果是回复，设置父评论用户名
-        if(comment.getParentCommentId() != null){
-            Comment parentComment = commentMapper.findById(comment.getParentCommentId());
-            if(parentComment != null){
-                User parentUser = userMapper.findById(parentComment.getUserId());
-                if(parentUser != null){
-                    dto.setParentCommentUserName(parentUser.getUsername());
+        if (comment.getParentCommentId() != null) {
+            try {
+                Comment parentComment = commentMapper.findById(comment.getParentCommentId());
+                if (parentComment != null) {
+                    User parentUser = userMapper.findById(parentComment.getUserId());
+                    if (parentUser != null) {
+                        dto.setParentCommentUserName(parentUser.getUsername());
+                    }
                 }
+            } catch (Exception e) {
+                logger.error("Error finding parent comment or user with ID: {}", comment.getParentCommentId(), e);
+                // 可以选择抛出异常，或者设置默认值
             }
         }
 
@@ -82,6 +105,7 @@ public class CommentServiceImpl implements CommentService {
         } else {
             dto.setReplies(new ArrayList<>()); // 没有回复时，设置一个空列表，避免前端处理 null
         }
+
         return dto;
     }
 
@@ -100,6 +124,8 @@ public class CommentServiceImpl implements CommentService {
         //更新
         comment.setContent(commentUpdateDTO.getContent());
         commentMapper.update(comment);
+        logger.info("Updated comment with ID: {}", comment.getId());
+
     }
 
     @Override
@@ -115,6 +141,7 @@ public class CommentServiceImpl implements CommentService {
         if (!userId.equals(comment.getUserId())) {
             throw new BusinessException(403, "无权限删除此评论");
         }
+        logger.info("Deleting comment with ID: {} by user ID: {}", commentId, userId);
         //逻辑删除
         commentMapper.delete(commentId);
     }

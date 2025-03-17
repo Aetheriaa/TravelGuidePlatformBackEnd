@@ -1,8 +1,13 @@
 package top.aetheria.travelguideplatform.guide.service.impl;
 
-
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import top.aetheria.travelguideplatform.common.constant.AppConstants;
 import top.aetheria.travelguideplatform.common.exception.BusinessException;
 import top.aetheria.travelguideplatform.common.vo.PageResult;
@@ -23,17 +28,20 @@ import top.aetheria.travelguideplatform.user.entity.User;
 import top.aetheria.travelguideplatform.user.entity.UserGuideHistory;
 import top.aetheria.travelguideplatform.user.mapper.UserGuideHistoryMapper;
 import top.aetheria.travelguideplatform.user.mapper.UserMapper;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 public class GuideServiceImpl implements GuideService {
-
+    private static final Logger logger = LoggerFactory.getLogger(GuideServiceImpl.class);
     @Autowired
     private GuideMapper guideMapper;
     @Autowired
@@ -63,6 +71,7 @@ public class GuideServiceImpl implements GuideService {
         guide.setViewCount(0);
         guide.setLikeCount(0);
         guide.setCommentCount(0);
+        guideMapper.insert(guide);
         // 处理标签
         if (guideCreateDTO.getTags() != null && !guideCreateDTO.getTags().isEmpty()) {
             List<Tag> tagList = guideCreateDTO.getTags().stream()
@@ -82,6 +91,7 @@ public class GuideServiceImpl implements GuideService {
 
             guideMapper.insertGuideTags(guide.getId(), tagList);
         }
+        logger.info("Guide created: {}", guide); // 记录创建的攻略信息
     }
 
     @Override
@@ -95,19 +105,15 @@ public class GuideServiceImpl implements GuideService {
         }
         GuideInfoDTO guideInfoDTO = new GuideInfoDTO();
         BeanUtils.copyProperties(guide, guideInfoDTO);
-        List<Tag> tags = tagMapper.findByGuideId(id);
-        guideInfoDTO.setTags(tags.stream().map(Tag::getName).collect(Collectors.toList()));
-//        if (guide.getTags() != null && !guide.getTags().isEmpty()) {
-//            List<String> tagList = Arrays.asList(guide.getTags().split("\\s*,\\s*")); // 正则表达式分割，并去除多余空格
-//            guideInfoDTO.setTags(tagList);
-//        }
-//        System.out.println(guideInfoDTO.getTags());
         //查询作者信息
         User user = userMapper.findById(guide.getUserId());
         if (user != null) {
             guideInfoDTO.setAuthorName(user.getUsername());
             guideInfoDTO.setAuthorAvatar(user.getAvatar());
         }
+        // 查询tags
+        List<Tag> tags = tagMapper.findByGuideId(guide.getId());
+        guideInfoDTO.setTags(tags.stream().map(Tag::getName).collect(Collectors.toList()));
 
         // 查询当前用户是否点赞、收藏
         if (userId != null) {
@@ -121,6 +127,7 @@ public class GuideServiceImpl implements GuideService {
             favorite.setUserId(userId);
             guideInfoDTO.setFavorited(favoriteMapper.countByGuideIdAndUserId(favorite) > 0);
         }
+        logger.debug("Guide details fetched for ID: {}", id); // DEBUG 级别日志
         return guideInfoDTO;
     }
 
@@ -129,11 +136,13 @@ public class GuideServiceImpl implements GuideService {
     public void update(GuideUpdateDTO guideUpdateDTO, Long userId) {
         Guide guide = guideMapper.findById(guideUpdateDTO.getId());
         if (guide == null) {
+            logger.warn("Attempt to update non-existent guide with ID: {}", guideUpdateDTO.getId()); // WARN 级别日志
             throw new BusinessException(404, "攻略不存在");
         }
 
         // 检查权限（例如，只能修改自己的攻略）
         if (!guide.getUserId().equals(userId)) {
+            logger.warn("User {} attempted to update guide {} without permission.", userId, guideUpdateDTO.getId());
             throw new BusinessException(403, "无权限修改此攻略");
         }
 
@@ -162,6 +171,7 @@ public class GuideServiceImpl implements GuideService {
             guideMapper.insertGuideTags(guide.getId(), tagList);
         }
         guideMapper.update(guide);
+        logger.info("Guide updated: {}", guide);
     }
 
     @Override
@@ -169,16 +179,19 @@ public class GuideServiceImpl implements GuideService {
     public void delete(Long id) {
         Guide guide = guideMapper.findById(id);
         if (guide == null) {
+            logger.warn("Attempt to delete non-existent guide with ID: {}", id);
             throw new BusinessException(404, "攻略不存在");
         }
         // 逻辑删除
         guideMapper.updateStatus(id, AppConstants.GUIDE_STATUS_DELETED);
+        logger.info("Guide with ID {} marked as deleted.", id);
     }
 
     @Override
     public PageResult<Guide> list(GuideListDTO guideListDTO) {
         // 设置分页参数
         PageHelper.startPage(guideListDTO.getPage(), guideListDTO.getPageSize());
+
         // 执行查询
         List<Guide> guides = guideMapper.list(guideListDTO);
 
@@ -208,6 +221,7 @@ public class GuideServiceImpl implements GuideService {
             guide.setLikeCount(likeMapper.countByGuideId(guideId)); //重新计算点赞数
             guideMapper.update(guide);
         }
+        logger.info("User {} liked guide {}.", userId, guideId);
     }
 
     @Override
@@ -217,7 +231,7 @@ public class GuideServiceImpl implements GuideService {
         like.setGuideId(guideId);
         like.setUserId(userId);
         likeMapper.delete(like);
-
+        logger.info("User {} unliked guide {}.", userId, guideId);
         //更新guide表中的点赞数
         Guide guide = guideMapper.findById(guideId);
         if (guide != null) {
@@ -238,6 +252,7 @@ public class GuideServiceImpl implements GuideService {
         }
         favorite.setCreateTime(LocalDateTime.now());
         favoriteMapper.insert(favorite);
+        logger.info("User {} favorited guide {}.", userId, guideId);
     }
 
     @Override
@@ -247,6 +262,7 @@ public class GuideServiceImpl implements GuideService {
         favorite.setGuideId(guideId);
         favorite.setUserId(userId);
         favoriteMapper.delete(favorite);
+        logger.info("User {} unfavorited guide {}.", userId, guideId);
     }
 
     @Override
@@ -259,60 +275,16 @@ public class GuideServiceImpl implements GuideService {
 
         // 更新攻略的浏览量
         guideMapper.incrementViewCount(guideId);
+        logger.info("User {} viewed guide {}.", userId, guideId); // INFO 级别日志
     }
-
     @Override
     public PageResult<GuideInfoDTO> getRecommendedGuides(Long userId, int page, int pageSize) {
-        // TODO: 在这里实现个性化推荐算法
-        // 1. 根据 userId 获取用户的兴趣标签、浏览历史等信息 (需要额外的表和 Mapper 方法)
-        // 2. 根据用户的兴趣标签，从数据库中查询相关的攻略
-        // 3. 可以使用一些推荐算法 (例如，基于内容的推荐、协同过滤等) 来计算推荐结果
-        // 4. 这里只是一个示例，返回一个空的列表，你需要根据你的实际需求来实现
-        // 暂时返回所有
-//        // 1. 获取用户的兴趣标签
-//        List<String> userTags = userMapper.findUserTags(userId);
-//        // 2. 创建 GuideListDTO 对象，并设置查询条件
-//        GuideListDTO guideListDTO = new GuideListDTO();
-//        guideListDTO.setTags(userTags);
-//
-//        // 3. 设置分页参数
-//        PageHelper.startPage(page, pageSize);
-//
-//        // 4. 调用 guideMapper.list 方法进行查询 (需要修改 list 方法)
-//        List<Guide> guides = guideMapper.list(guideListDTO);
-//
-//        // 5. 获取分页结果
-//        Page<Guide> pageInfo = (Page<Guide>) guides;
-//
-//        // 6. 将 Guide 列表转换为 GuideInfoDTO 列表,并查询作者信息
-//        List<GuideInfoDTO> guideInfoDTOS = guides.stream()
-//                .map(guide -> {
-//                    GuideInfoDTO guideInfoDTO = new GuideInfoDTO();
-//                    BeanUtils.copyProperties(guide, guideInfoDTO);
-//                    User user = userMapper.findById(guide.getUserId());
-//                    if(user!=null){
-//                        guideInfoDTO.setAuthorName(user.getUsername());
-//                        guideInfoDTO.setAuthorAvatar(user.getAvatar());
-//                    }
-//                    // 查询tags
-//                    List<Tag> tags = guideMapper.findTagsByGuideId(guide.getId());
-//                    guideInfoDTO.setTags(tags.stream().map(Tag::getName).collect(Collectors.toList()));
-//
-//                    return guideInfoDTO;
-//                })
-//                .collect(Collectors.toList());
-//
-//        // 7. 返回 PageResult 对象
-//        return new PageResult<>(pageInfo.getTotal(), guideInfoDTOS);
-        // 1. 获取用户最近浏览的攻略ID列表（例如，最近一个月内）
+        // 1. 获取用户最近浏览的攻略ID和浏览时间 (例如，最近一个月内)
         LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
         List<Long> viewedGuideIds = userGuideHistoryMapper.findRecentGuideIdsByUserIdAndDate(userId, oneMonthAgo);
-        //List<Long> viewedGuideIds = userGuideHistoryMapper.findRecentGuideIdsByUserId(userId);
-        List<Guide> allGuides = new ArrayList<>(); // 用于存储所有查询结果的列表
-
+        List<Guide> allGuides = new ArrayList<>();
         if (viewedGuideIds.isEmpty()) {
-            // 如果用户没有浏览历史，可以返回热门攻略、最新攻略或空列表
-            // 这里返回一个空的 PageResult 作为示例
+            logger.info("No recent guide views found for user {}. Returning empty recommendations.", userId);
             GuideListDTO fallbackDTO = new GuideListDTO();
             fallbackDTO.setSortBy("createTime");
             fallbackDTO.setSortOrder("desc");
@@ -322,10 +294,7 @@ public class GuideServiceImpl implements GuideService {
             List<Guide> fallbackGuides = guideMapper.list(fallbackDTO);
             Collections.shuffle(fallbackGuides);
             allGuides.addAll(new ArrayList<>(fallbackGuides.subList(0, 8)));
-//            return new PageResult<>(0L, Collections.emptyList());
-
         }
-
         else {// 2. 获取这些攻略的标签，并计算标签权重
             Map<String, Double> tagWeights = new HashMap<>();
             for (Long guideId : viewedGuideIds) {
@@ -354,8 +323,6 @@ public class GuideServiceImpl implements GuideService {
                 List<Guide> fallbackGuides = guideMapper.list(fallbackDTO);
                 Collections.shuffle(fallbackGuides);
                 allGuides.addAll(new ArrayList<>(fallbackGuides.subList(0, 8)));
-
-//                return new PageResult<>(0L, Collections.emptyList());
             }
 
             else{// 构建查询条件
@@ -367,60 +334,13 @@ public class GuideServiceImpl implements GuideService {
                         .map(Map.Entry::getKey)
                         .collect(Collectors.toList());
 
-//        guideListDTO.setTags(weightedTags);
                 guideListDTO.setPage(page);
                 guideListDTO.setPageSize(pageSize);
-
-                // 4. 分页查询
-//        PageHelper.startPage(page, pageSize);
-//        List<Guide> guides = new ArrayList<>();
-//        for(var weightedTag : weightedTags) {
-//            List<String> weightedT =new ArrayList<>();
-//            weightedT.add(weightedTag);
-//            guideListDTO.setTags(weightedTags);
-//            guides.addAll(new ArrayList<>(guideMapper.list(guideListDTO)));
-//        }
-////        List<Guide> guides = guideMapper.list(guideListDTO);
-//        Page<Guide> pageInfo = (Page<Guide>) guides;
-//
-//        // 5. 转换为 GuideInfoDTO 并返回
-//        List<GuideInfoDTO> guideInfoDTOS = guides.stream()
-//                .map(guide -> {
-//                    GuideInfoDTO guideInfoDTO = new GuideInfoDTO();
-//                    BeanUtils.copyProperties(guide, guideInfoDTO);
-//                    // 查询作者信息
-//                    User user = userMapper.findById(guide.getUserId());
-//                    if (user != null) {
-//                        guideInfoDTO.setAuthorName(user.getUsername());
-//                        guideInfoDTO.setAuthorAvatar(user.getAvatar());
-//                    }
-//                    // 查询tags
-//                    List<Tag> tags = guideMapper.findTagsByGuideId(guide.getId());
-//                    guideInfoDTO.setTags(tags.stream().map(Tag::getName).collect(Collectors.toList()));
-//
-//                    // 查询当前用户是否点赞、收藏
-//                    if (userId != null) {
-//                        Like like = new Like();
-//                        like.setGuideId(guide.getId());
-//                        like.setUserId(userId);
-//                        guideInfoDTO.setLiked(likeMapper.countByGuideIdAndUserId(like) > 0);
-//
-//                        Favorite favorite = new Favorite();
-//                        favorite.setGuideId(guide.getId());
-//                        favorite.setUserId(userId);
-//                        guideInfoDTO.setFavorited(favoriteMapper.countByGuideIdAndUserId(favorite) > 0);
-//                    }
-//                    return guideInfoDTO;
-//                })
-//                .collect(Collectors.toList());
-//
-//        return new PageResult<>(pageInfo.getTotal(), guideInfoDTOS);
 
                 for (var weightedTag : weightedTags) {
                     List<String> weightedT = new ArrayList<>();
                     weightedT.add(weightedTag);
                     guideListDTO.setTags(weightedT); // 每次循环只设置一个 tag 用于查询
-//            allGuides.addAll(guideMapper.list(guideListDTO)); // 执行查询并添加到总列表
                     List<Guide> tguide = guideMapper.list(guideListDTO);
                     Collections.shuffle(tguide);
                     allGuides.add(tguide.get(0)); // 执行查询并添加到总列表
@@ -501,7 +421,7 @@ public class GuideServiceImpl implements GuideService {
     }
 
     @Override
-    public  PageResult<GuideInfoDTO> getPopularGuides(int page, int pageSize) {
+    public PageResult<GuideInfoDTO> getPopularGuides(int page, int pageSize) {
         // TODO: 在这里实现获取热门攻略的逻辑
         // 1. 从数据库中查询浏览量、点赞数、评论数等指标较高的攻略
         // 2. 可以根据需要设置查询条件（例如，只查询最近一周的热门攻略）
@@ -530,8 +450,8 @@ public class GuideServiceImpl implements GuideService {
         guideListDTO.setSortBy("createTime");
         guideListDTO.setSortOrder("desc");
         PageHelper.startPage(page,pageSize);
-        List<Guide> guides = guideMapper.list(guideListDTO);
-        Page<Guide> pageInfo = (Page<Guide>) guides;
+        List<Guide> guides =  guideMapper.list(guideListDTO);
+        Page<Guide> pageInfo = (Page<Guide>)guides;
         List<GuideInfoDTO> guideInfoDTOS =  pageInfo.stream().map(guide->{
             GuideInfoDTO guideInfoDTO = new GuideInfoDTO();
             BeanUtils.copyProperties(guide,guideInfoDTO);
@@ -539,11 +459,8 @@ public class GuideServiceImpl implements GuideService {
         }).collect(Collectors.toList());
         return new PageResult<>(pageInfo.getTotal(),guideInfoDTOS);
     }
-
     @Override
     public List<Tag> getPopularTags(int limit) {
         return tagMapper.findPopularTags(limit);
     }
-
-
 }

@@ -1,6 +1,12 @@
 package top.aetheria.travelguideplatform.user.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 import top.aetheria.travelguideplatform.common.constant.AppConstants;
 import top.aetheria.travelguideplatform.common.utils.JwtUtils;
 import top.aetheria.travelguideplatform.common.vo.PageResult;
@@ -13,16 +19,14 @@ import top.aetheria.travelguideplatform.user.dto.UserUpdateDTO;
 import top.aetheria.travelguideplatform.user.entity.User;
 import top.aetheria.travelguideplatform.user.service.UserService;
 import top.aetheria.travelguideplatform.user.vo.LoginVO;
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     @Autowired
     private UserService userService;
@@ -32,13 +36,17 @@ public class UserController {
 
     @PostMapping("/register")
     public Result register(@Validated @RequestBody UserRegisterDTO userRegisterDTO) {
+        logger.info("Registering new user: {}", userRegisterDTO);
         userService.register(userRegisterDTO);
+        logger.info("User registration successful.");
         return Result.success();
     }
 
     @PostMapping("/login")
     public Result<LoginVO> login(@Validated @RequestBody UserLoginDTO userLoginDTO) {
+        logger.info("User login attempt: {}", userLoginDTO.getUsernameOrEmail());
         LoginVO loginVO = userService.login(userLoginDTO);
+        logger.info("User login successful: {}", loginVO.getUsername());
         return Result.success(loginVO);
     }
 
@@ -51,12 +59,13 @@ public class UserController {
         }
         // 从token中解析出用户ID
         Long userId = jwtUtils.getUserIdFromToken(token);
+        logger.info("Getting user info for userId: {}", userId);
         // 根据id查询
         User user = userService.getById(userId);
-
         // entity -> DTO
         UserInfoDTO userInfoDTO = new UserInfoDTO();
         BeanUtils.copyProperties(user,userInfoDTO);
+        logger.info("Returning user info for userId: {}", userId);
         return Result.success(userInfoDTO);
 
     }
@@ -70,10 +79,10 @@ public class UserController {
         }
         // 从token中解析出用户ID
         Long userId = jwtUtils.getUserIdFromToken(token);
+        logger.info("Updating user. userId: {}, DTO: {}", userId, userUpdateDTO);
         userService.update(userId, userUpdateDTO);
         return Result.success();
     }
-
     // 获取当前用户的浏览历史
     @GetMapping("/guide-history")
     public Result<PageResult<GuideInfoDTO>> getGuideHistory(
@@ -90,6 +99,7 @@ public class UserController {
         if(userId == null){
             return Result.error(401,"请先登录");
         }
+        logger.info("Getting guide history for userId: {}, page: {}, pageSize: {}", userId, page, pageSize);
         PageResult<GuideInfoDTO> result = userService.getGuideHistory(userId, page, pageSize);
         return Result.success(result);
     }
@@ -110,7 +120,7 @@ public class UserController {
         if(userId == null){
             return Result.error(401,"请先登录");
         }
-
+        logger.info("Getting liked guides for userId: {}, page: {}, pageSize: {}", userId, page, pageSize);
         PageResult<GuideInfoDTO> result = userService.getLikedGuides(userId, page, pageSize);
         return Result.success(result);
     }
@@ -121,25 +131,23 @@ public class UserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize,
             HttpServletRequest request
-    ) {
-        Result<PageResult<GuideInfoDTO>> res;   // 从请求头中获取token
+    ) {   // 从请求头中获取token
         String token = request.getHeader(AppConstants.JWT_HEADER_KEY);
         if (token != null && token.startsWith(AppConstants.JWT_TOKEN_PREFIX)) {
             token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
         }
         Long userId = jwtUtils.getUserIdFromToken(token);
-        if (userId == null) {
-            res = Result.error(401, "请先登录");
-        } else {
-            PageResult<GuideInfoDTO> result = userService.getFavoriteGuides(userId, page, pageSize);
-            res = Result.success(result);
+        if(userId == null){
+            return Result.error(401,"请先登录");
         }
-        return res;
+        logger.info("Getting favorite guides for userId: {}, page: {}, pageSize: {}", userId, page, pageSize);
+        PageResult<GuideInfoDTO> result = userService.getFavoriteGuides(userId, page, pageSize);
+        return Result.success(result);
     }
-
     // 关注用户
     @PostMapping("/{userId}/follow")
     public Result followUser(@PathVariable Long userId, HttpServletRequest request) {
+        // 从请求头中获取token并解析出当前用户ID
         String token = request.getHeader(AppConstants.JWT_HEADER_KEY);
         if (token != null && token.startsWith(AppConstants.JWT_TOKEN_PREFIX)) {
             token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
@@ -148,6 +156,9 @@ public class UserController {
         if(currentUserId == null){
             return Result.error(401,"请先登录");
         }
+        // 记录关注操作的日志
+        logger.info("User {} is attempting to follow user {}.", currentUserId, userId);
+
         userService.followUser(currentUserId, userId);
         return Result.success();
     }
@@ -155,6 +166,7 @@ public class UserController {
     // 取消关注用户
     @DeleteMapping("/{userId}/follow")
     public Result unfollowUser(@PathVariable Long userId, HttpServletRequest request) {
+        // 从请求头中获取token并解析出当前用户ID
         String token = request.getHeader(AppConstants.JWT_HEADER_KEY);
         if (token != null && token.startsWith(AppConstants.JWT_TOKEN_PREFIX)) {
             token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
@@ -163,6 +175,9 @@ public class UserController {
         if(currentUserId == null){
             return Result.error(401,"请先登录");
         }
+        // 记录取消关注操作的日志
+        logger.info("User {} is attempting to unfollow user {}.", currentUserId, userId);
+
         userService.unfollowUser(currentUserId, userId);
         return Result.success();
     }
@@ -170,14 +185,18 @@ public class UserController {
     // 获取用户的关注列表
     @GetMapping("/{userId}/following")
     public Result<List<User>> getFollowingList(@PathVariable Long userId) {
+        logger.info("Getting following list for user ID: {}", userId);
         List<User> following = userService.getFollowingList(userId);
+        logger.info("Returning following list with size: {} for user ID: {}", following.size(), userId);
         return Result.success(following);
     }
 
     // 获取用户的粉丝列表
     @GetMapping("/{userId}/followers")
     public Result<List<User>> getFollowerList(@PathVariable Long userId) {
+        logger.info("Getting followers list for user ID: {}", userId);
         List<User> followers = userService.getFollowerList(userId);
+        logger.info("Returning followers list with size: {} for user ID: {}", followers.size(), userId);
         return Result.success(followers);
     }
     // 检查当前用户是否关注了某个用户
@@ -192,39 +211,64 @@ public class UserController {
         if (currentUserId == null) {
             return Result.success(false); // 未登录，返回 false
         }
+        logger.info("Checking if user {} is following user {}.", currentUserId, userId);
         boolean isFollowing = userService.isFollowing(currentUserId, userId);
+        logger.info("User {} is following user {}: {}", currentUserId, userId, isFollowing);
         return Result.success(isFollowing);
     }
-    // 添加一个新的 API 接口，根据用户 ID 获取用户信息
+//    @GetMapping("/tags")
+//    public Result<List<String>> getUserTags(HttpServletRequest request) {
+//        // 从请求头中获取token
+//        String token = request.getHeader(AppConstants.JWT_HEADER_KEY);
+//        if (token != null && token.startsWith(AppConstants.JWT_TOKEN_PREFIX)) {
+//            token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
+//        }
+//        Long userId = jwtUtils.getUserIdFromToken(token);
+//        if(userId == null){
+//            return Result.error(401,"请先登录");
+//        }
+//        logger.info("Getting tags for user ID: {}", userId);
+//        List<String> tags = userService.getUserTags(userId);
+//        logger.info("Returning {} tags for user ID: {}", tags.size(), userId);
+//        return Result.success(tags);
+//    }
     @GetMapping("/{userId}")
     public Result<UserInfoDTO> getUserInfo(@PathVariable Long userId) {
+        logger.info("Getting user info for user ID: {}", userId);
         User user = userService.getById(userId);
         if (user == null) {
+            logger.warn("User with ID: {} not found", userId);
             return Result.error(404, "用户不存在");
         }
         // 将 User 对象转换为 UserInfoDTO 对象 (你可以创建一个 DTO 类)
         UserInfoDTO userInfoDTO = new UserInfoDTO();
         BeanUtils.copyProperties(user,userInfoDTO);
+        logger.info("Returning user info DTO for user ID: {}", userId);
         return Result.success(userInfoDTO);
     }
 
     // 获取关注数
     @GetMapping("/{userId}/following/count")
     public Result<Integer> getFollowingCount(@PathVariable Long userId) {
+        logger.info("Getting following count for user ID: {}", userId);
         int count = userService.getFollowingCount(userId);
+        logger.info("Returning following count: {} for user ID: {}", count, userId);
         return Result.success(count);
     }
 
     // 获取粉丝数
     @GetMapping("/{userId}/followers/count")
     public Result<Integer> getFollowerCount(@PathVariable Long userId) {
+        logger.info("Getting follower count for user ID: {}", userId);
         int count = userService.getFollowerCount(userId);
+        logger.info("Returning follower count: {} for user ID: {}", count, userId);
         return Result.success(count);
     }
-
     @GetMapping("/search")
     public Result<List<User>> searchUsers(@RequestParam String keyword) {
+        logger.info("Searching users with keyword: {}", keyword);
         List<User> users = userService.searchUsers(keyword);
+        logger.info("Returning {} users for search keyword: {}", users.size(), keyword);
         return Result.success(users);
     }
 }
