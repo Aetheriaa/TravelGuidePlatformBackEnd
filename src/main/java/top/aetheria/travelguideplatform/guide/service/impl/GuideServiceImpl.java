@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import top.aetheria.travelguideplatform.common.constant.AppConstants;
 import top.aetheria.travelguideplatform.common.exception.BusinessException;
+import top.aetheria.travelguideplatform.common.utils.TagExtractor;
 import top.aetheria.travelguideplatform.common.vo.PageResult;
 import top.aetheria.travelguideplatform.guide.dto.GuideCreateDTO;
 import top.aetheria.travelguideplatform.guide.dto.GuideInfoDTO;
@@ -462,5 +463,11 @@ public class GuideServiceImpl implements GuideService {
     @Override
     public List<Tag> getPopularTags(int limit) {
         return tagMapper.findPopularTags(limit);
+    }
+
+    @Override
+    public List<String> extractTagsFromContent(String content) {
+        // 调用 TagExtractor 工具类来提取标签
+        return TagExtractor.extractTags(content, 5); // 提取 5 个标签 (你可以根据需要调整数量)
     }
 }

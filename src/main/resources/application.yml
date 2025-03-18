@@ -38,3 +38,11 @@ logging:
     rollingpolicy: #滚动策略
       max-file-size: 10MB  #最大大小
       max-history: 30      #保存天数
+
+app:
+  upload:
+    path: D:/Documents/JavaCode/TravelGuidePlatform/src/main/resources/static/uploads/  # 绝对路径
+    # 或
+    # path: uploads/  # 相对于项目根目录的路径
+    # 或
+    # path: src/main/resources/static/uploads/ #相对于项目根目录

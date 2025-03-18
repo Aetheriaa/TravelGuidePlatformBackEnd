@@ -62,10 +62,20 @@ public class PrivateMessageServiceImpl implements PrivateMessageService {
 
     @Override
     public List<PrivateMessageDTO> getConversation(Long userId1, Long userId2) {
+        User user1 = userMapper.findById(userId1);
+        User user2 = userMapper.findById(userId2);
         logger.info("Retrieving conversation between user {} and user {}", userId1, userId2);
-        List<PrivateMessageDTO> messageDTOS = messageMapper.findConversation(userId1, userId2);
+        List<PrivateMessageDTO> messageDTOS =  messageMapper.findConversation(userId1, userId2);
         for(var message : messageDTOS) {
             logger.info("message:{}",message);
+            if(message.getSenderId() == userId1){
+                message.setSenderAvatar(user1.getAvatar());
+                message.setReceiverAvatar(user2.getAvatar());
+            }
+            else {
+                message.setSenderAvatar(user2.getAvatar());
+                message.setReceiverAvatar(user1.getAvatar());
+            }
         }
         return messageDTOS;
     }

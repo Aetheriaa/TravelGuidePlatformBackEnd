@@ -27,5 +27,5 @@ public interface GuideService {
     PageResult<GuideInfoDTO> getPopularGuides(int page, int pageSize);
     PageResult<GuideInfoDTO> getLatestGuides(int page, int pageSize);
     List<Tag> getPopularTags(int limit); // 获取热门标签
-
+    List<String> extractTagsFromContent(String content); // 从内容中提取标签
 }

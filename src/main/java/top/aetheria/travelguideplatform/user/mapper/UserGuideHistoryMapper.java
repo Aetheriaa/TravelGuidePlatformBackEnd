@@ -24,7 +24,8 @@ public interface UserGuideHistoryMapper {
      List<Long> findRecentGuideIdsByUserId(@Param("userId") Long userId);
 
     // 查询用户最近浏览的攻略ID和浏览时间, 返回List<Map<String, Object>>
-    @Select("SELECT guide_id, MAX(view_time) as view_time FROM user_guide_history WHERE user_id = #{userId} GROUP BY guide_id ORDER BY view_time DESC LIMIT #{offset}, #{limit}")
+//    @Select("SELECT guide_id, MAX(view_time) as view_time FROM user_guide_history WHERE user_id = #{userId} GROUP BY guide_id ORDER BY view_time DESC LIMIT #{offset}, #{limit}")
+    @Select("SELECT guide_id, MAX(view_time) as view_time FROM user_guide_history WHERE user_id = #{userId} GROUP BY guide_id ORDER BY view_time DESC")
     List<Map<String, Object>> findRecentGuidesWithViewTime(@Param("userId") Long userId,@Param("offset") int offset, @Param("limit") int limit);
 
     List<Map<String, Object>> findHistoryByUserId(@Param("userId") Long userId, @Param("offset") int offset, @Param("limit") int limit);

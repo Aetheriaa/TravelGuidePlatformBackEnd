@@ -4,8 +4,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import top.aetheria.travelguideplatform.common.constant.AppConstants;
 import top.aetheria.travelguideplatform.common.utils.JwtUtils;
 import top.aetheria.travelguideplatform.common.vo.PageResult;
@@ -18,8 +20,12 @@ import top.aetheria.travelguideplatform.guide.entity.Guide;
 import top.aetheria.travelguideplatform.guide.entity.Tag;
 import top.aetheria.travelguideplatform.guide.service.GuideService;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/guides")
@@ -27,6 +33,8 @@ public class GuideController {
 
     private static final Logger logger = LoggerFactory.getLogger(GuideController.class); // 添加日志
 
+    @Value("${app.upload.path}")
+    private String uploadPath;
     @Autowired
     private GuideService guideService;
 
@@ -234,5 +242,61 @@ public class GuideController {
         }
         guideService.recordGuideView(userId, guideId);
         return Result.success();
+    }
+
+    @PostMapping("/upload-cover-image")
+    @ResponseBody
+    public Result<Map<String, String>> uploadCoverImage(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        if (file.isEmpty()) {
+            return Result.error(400, "上传文件不能为空");
+        }
+
+        try {
+            // 1. 构建保存文件的目录 (使用配置的上传路径)
+            File uploadDir = new File(uploadPath, "cover_images");
+            if (!uploadDir.exists()) {
+                uploadDir.mkdirs(); // 如果目录不存在，创建目录
+            }
+
+            // 2. 生成唯一文件名
+            String originalFilename = file.getOriginalFilename();
+            String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            String filename = UUID.randomUUID().toString() + extension;
+
+            // 3. 构建文件保存路径
+            String filePath = uploadDir.getAbsolutePath() + File.separator + filename; // 使用绝对路径, 和 File.separator
+            File dest = new File(filePath);
+
+            // 4. 保存文件
+            file.transferTo(dest);
+
+            // 5. 构建并返回文件的完整 URL
+            //    这里假设你的应用可以通过 /uploads 访问到上传的文件
+            //    你需要根据你的实际部署情况来修改这里的 URL
+            String serverName = request.getServerName(); // 获取服务器名 (例如 localhost)
+            int serverPort = request.getServerPort();    // 获取服务器端口 (例如 8080)
+            String contextPath = request.getContextPath(); // 获取上下文路径 (例如 /travel-platform)
+            String fileUrl = "http://" + serverName + ":" + serverPort + contextPath + "/uploads/cover_images/" + filename;
+//      String fileUrl =  "/uploads/cover_images/" + filename; //不能直接返回这个
+            logger.info("Uploaded file URL: {}", fileUrl);
+            Map<String, String> result = new HashMap<>();
+            result.put("url", fileUrl);
+            return Result.success(result);
+
+        } catch (IOException e) {
+            logger.error("文件上传失败", e);
+            return Result.error(500, "文件上传失败");
+        }
+
+    }
+    // 自动提取标签的接口
+    @PostMapping("/extract-tags")
+    public Result<List<String>> extractTags(@RequestBody Map<String, String> requestBody) {
+        String content = requestBody.get("content");
+        if (content == null || content.trim().isEmpty()) {
+            return Result.error(400, "Content cannot be empty");
+        }
+        List<String> tags = guideService.extractTagsFromContent(content); // 调用 Service 层方法
+        return Result.success(tags);
     }
 }
