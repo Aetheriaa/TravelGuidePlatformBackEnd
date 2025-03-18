@@ -53,6 +53,7 @@ public class TopicController {
         logger.info("Getting topic by ID: {}", id);
         TopicInfoDTO topic = topicService.getTopicById(id);
         //增加浏览次数,暂时不做
+        topicService.addViewCount(topic.getId());
         logger.info("Returning topic: {}", topic);
         return Result.success(topic);
     }
