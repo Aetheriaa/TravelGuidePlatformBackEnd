@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 控制台输出 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Syslog Appender -->
+    <appender name="SYSLOG" class="ch.qos.logback.classic.net.SyslogAppender">
+        <syslogHost>192.168.211.131</syslogHost> <!-- 替换为你的 Linux 主机的 IP 地址 -->
+        <port>514</port>  <!-- Syslog 默认端口 -->
+        <facility>LOCAL0</facility>
+        <!--  facility： 这是 Syslog 的一个概念，用于标识日志消息的来源。
+        常见的 facility 值包括：
+        KERN (内核消息)
+        USER (用户级消息)
+        MAIL (邮件系统)
+        DAEMON (系统守护进程)
+        AUTH (认证消息)
+        SYSLOG (Syslog 内部消息)
+        LPR (打印机相关)
+        NEWS (新闻组)
+        UUCP (Unix-to-Unix 复制)
+        CRON (定时任务)
+        AUTHPRIV (认证和安全相关)
+        FTP (FTP 服务)
+        LOCAL0 到 LOCAL7 (本地使用)
+        -->
+        <suffixPattern>[%thread] %logger - %msg</suffixPattern> <!-- 日志格式 -->
+        <charset>UTF-8</charset> <!-- 设置字符编码 -->
+    </appender>
+
+    <!-- 设置 root logger 的级别和 appender -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="SYSLOG" />
+    </root>
+
+    <!-- 可以为特定的包或类设置不同的日志级别 -->
+    <logger name="top.aetheria.travelguideplatform" level="DEBUG" />
+
+</configuration>
