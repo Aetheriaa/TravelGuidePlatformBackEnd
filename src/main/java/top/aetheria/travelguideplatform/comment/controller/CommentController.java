@@ -36,6 +36,9 @@ public class CommentController {
             token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
         }
         Long userId = jwtUtils.getUserIdFromToken(token);
+        if(userId == null){
+            return Result.error(401,"请先登录");
+        }
         logger.info("Creating comment. userId: {}, DTO: {}", userId, commentCreateDTO); // INFO 级别
 
         try {
@@ -88,6 +91,9 @@ public class CommentController {
             token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
         }
         Long userId = jwtUtils.getUserIdFromToken(token);
+        if(userId == null){
+            return Result.error(401,"请先登录");
+        }
         logger.info("Deleting comment. userId: {}, commentId: {}", userId, commentId);
         try{
             commentService.delete(userId, commentId);
