@@ -1,5 +1,8 @@
 package top.aetheria.travelguideplatform.user.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +24,7 @@ import top.aetheria.travelguideplatform.user.service.UserService;
 import top.aetheria.travelguideplatform.user.vo.LoginVO;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -36,10 +40,36 @@ public class UserController {
 
     @PostMapping("/register")
     public Result register(@Validated @RequestBody UserRegisterDTO userRegisterDTO) {
+        // 验证邮箱验证码
+        if (!userService.verifyEmailCode(userRegisterDTO.getEmail(), userRegisterDTO.getCode())) {
+            return Result.error(400, "验证码错误或已过期");
+        }
         logger.info("Registering new user: {}", userRegisterDTO);
         userService.register(userRegisterDTO);
         logger.info("User registration successful.");
         return Result.success();
+    }
+    // 发送邮箱验证码 (用于注册、找回密码等)
+    @PostMapping("/send-verification-code")
+    public Result sendVerificationCode(@RequestBody String email) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode = objectMapper.readTree(email);
+        return userService.sendEmailCode(jsonNode.get("email").asText());
+    }
+
+    // 忘记密码 - 重置密码
+    @PostMapping("/reset-password")
+    public Result resetPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String code = request.get("code");
+        String newPassword = request.get("newPassword");
+
+        if (!userService.verifyEmailCode(email, code)) {
+            return Result.error(400, "验证码错误或已过期");
+        }
+
+        userService.resetPassword(email, newPassword);
+        return Result.success("密码重置成功");
     }
 
     @PostMapping("/login")
@@ -216,22 +246,7 @@ public class UserController {
         logger.info("User {} is following user {}: {}", currentUserId, userId, isFollowing);
         return Result.success(isFollowing);
     }
-//    @GetMapping("/tags")
-//    public Result<List<String>> getUserTags(HttpServletRequest request) {
-//        // 从请求头中获取token
-//        String token = request.getHeader(AppConstants.JWT_HEADER_KEY);
-//        if (token != null && token.startsWith(AppConstants.JWT_TOKEN_PREFIX)) {
-//            token = token.substring(AppConstants.JWT_TOKEN_PREFIX.length());
-//        }
-//        Long userId = jwtUtils.getUserIdFromToken(token);
-//        if(userId == null){
-//            return Result.error(401,"请先登录");
-//        }
-//        logger.info("Getting tags for user ID: {}", userId);
-//        List<String> tags = userService.getUserTags(userId);
-//        logger.info("Returning {} tags for user ID: {}", tags.size(), userId);
-//        return Result.success(tags);
-//    }
+
     @GetMapping("/{userId}")
     public Result<UserInfoDTO> getUserInfo(@PathVariable Long userId) {
         logger.info("Getting user info for user ID: {}", userId);

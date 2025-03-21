@@ -7,13 +7,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 import top.aetheria.travelguideplatform.common.constant.AppConstants;
 import top.aetheria.travelguideplatform.common.exception.BusinessException;
+import top.aetheria.travelguideplatform.common.utils.EmailService;
 import top.aetheria.travelguideplatform.common.utils.JwtUtils;
 import top.aetheria.travelguideplatform.common.vo.PageResult;
+import top.aetheria.travelguideplatform.common.vo.Result;
 import top.aetheria.travelguideplatform.guide.dto.GuideInfoDTO;
 import top.aetheria.travelguideplatform.guide.entity.Guide;
 import top.aetheria.travelguideplatform.guide.entity.Tag;
@@ -31,21 +34,31 @@ import top.aetheria.travelguideplatform.user.service.UserService;
 import top.aetheria.travelguideplatform.user.vo.LoginVO;
 
 import java.beans.FeatureDescriptor;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import  org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 @Service
 public class UserServiceImpl implements UserService {
+
     private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
+
+    private Map<String, String> verificationCodes = new HashMap<>();
+
+//    private static final String VERIFICATION_CODE_PREFIX = "verification_code:";
+//
+//    private static final long VERIFICATION_CODE_EXPIRATION = 5 * 60; // 5 分钟过期
+//
+//    @Autowired
+//    private RedisTemplate<String, String> redisTemplate; // 注入 RedisTemplate
+
+    @Autowired
+    private EmailService emailService;
+
     @Autowired
     private UserMapper userMapper;
 
@@ -326,5 +339,61 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<User> searchUsers(String keyword) {
         return userMapper.searchUsers(keyword);
+    }
+
+    // 生成并发送验证码 (可用于注册、找回密码等)
+    // 模拟一个内存中的验证码存储 (仅用于演示，不安全，不能用于生产环境)
+
+    // 生成并发送验证码 (可用于注册、找回密码等)
+    @Override
+    public Result sendEmailCode(String email) {
+        // 1. 生成验证码 (6 位数字)
+        String code = String.format("%06d", new Random().nextInt(1000000));
+        // 2. 将验证码存储到 Redis 中，设置过期时间 (5 分钟)
+        //String key = VERIFICATION_CODE_PREFIX + email;
+        //redisTemplate.opsForValue().set(key, code, VERIFICATION_CODE_EXPIRATION, TimeUnit.SECONDS);
+        verificationCodes.put(email,code);
+        // 3. 发送邮件
+        try {
+            emailService.sendVerificationCode(email, code);
+            return Result.success("验证码已发送，请注意查收");
+        } catch (Exception e) {
+            logger.error("Failed to send verification code to email: {}", email, e);
+            return Result.error("验证码发送失败，请稍后重试");
+        }
+    }
+
+    // 验证邮箱验证码
+    @Override
+    public boolean verifyEmailCode(String email, String code) {
+//        String key = VERIFICATION_CODE_PREFIX + email;
+//        String storedCode = redisTemplate.opsForValue().get(key);
+//        if (storedCode != null && storedCode.equals(code)) {
+//            // 验证码正确，删除 Redis 中的验证码
+//            redisTemplate.delete(key);
+//            return true;
+//        }
+//        return false;
+        // 模拟验证
+        String storedCode = verificationCodes.get(email);
+        if(storedCode != null && storedCode.equals(code)){
+            verificationCodes.remove(email); //验证通过，移除
+            return true;
+        }
+        return false;
+    }
+    //修改密码
+    @Override
+    @Transactional
+    public void resetPassword(String email, String newPassword) {
+        User user = userMapper.findByEmail(email);
+        if (user == null) {
+            throw new BusinessException(400, "用户不存在"); // 邮箱不存在
+        }
+
+        // 更新密码 (记得加密)
+        String hashedPassword = DigestUtils.md5DigestAsHex(newPassword.getBytes());
+        user.setPassword(hashedPassword);
+        userMapper.update(user);
     }
 }

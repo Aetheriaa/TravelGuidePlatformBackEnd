@@ -1,22 +1,22 @@
 package top.aetheria.travelguideplatform.product.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-import top.aetheria.travelguideplatform.common.constant.AppConstants;
-import top.aetheria.travelguideplatform.common.exception.BusinessException;
-import top.aetheria.travelguideplatform.common.utils.JwtUtils;
-import top.aetheria.travelguideplatform.common.vo.PageResult;
-import top.aetheria.travelguideplatform.common.vo.Result;
-import top.aetheria.travelguideplatform.product.dto.ProductCreateDTO;
-import top.aetheria.travelguideplatform.product.dto.ProductInfoDTO;
-import top.aetheria.travelguideplatform.product.dto.ProductListDTO;
-import top.aetheria.travelguideplatform.product.dto.ProductUpdateDTO;
-import top.aetheria.travelguideplatform.product.entity.Product;
-import top.aetheria.travelguideplatform.product.service.ProductService;
+        import jakarta.servlet.http.HttpServletRequest;
+        import org.slf4j.Logger;
+        import org.slf4j.LoggerFactory;
+        import org.springframework.beans.factory.annotation.Autowired;
+        import org.springframework.validation.annotation.Validated;
+        import org.springframework.web.bind.annotation.*;
+        import top.aetheria.travelguideplatform.common.constant.AppConstants;
+        import top.aetheria.travelguideplatform.common.exception.BusinessException;
+        import top.aetheria.travelguideplatform.common.utils.JwtUtils;
+        import top.aetheria.travelguideplatform.common.vo.PageResult;
+        import top.aetheria.travelguideplatform.common.vo.Result;
+        import top.aetheria.travelguideplatform.product.dto.ProductCreateDTO;
+        import top.aetheria.travelguideplatform.product.dto.ProductInfoDTO;
+        import top.aetheria.travelguideplatform.product.dto.ProductListDTO;
+        import top.aetheria.travelguideplatform.product.dto.ProductUpdateDTO;
+        import top.aetheria.travelguideplatform.product.entity.Product;
+        import top.aetheria.travelguideplatform.product.service.ProductService;
 
 @RestController
 @RequestMapping("/api/v1/products")

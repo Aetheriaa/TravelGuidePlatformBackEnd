@@ -1,6 +1,7 @@
 package top.aetheria.travelguideplatform.user.service;
 
 import top.aetheria.travelguideplatform.common.vo.PageResult;
+import top.aetheria.travelguideplatform.common.vo.Result;
 import top.aetheria.travelguideplatform.guide.dto.GuideInfoDTO;
 import top.aetheria.travelguideplatform.user.dto.UserLoginDTO;
 import top.aetheria.travelguideplatform.user.dto.UserRegisterDTO;
@@ -32,4 +33,11 @@ public interface UserService {
     int getFollowerCount(Long userId);
 
     List<User> searchUsers(String keyword); // 搜索用户
+
+    //发送邮箱验证码
+    Result sendEmailCode(String email);
+    // 验证邮箱验证码 (用于注册、找回密码等)
+    boolean verifyEmailCode(String email, String code);
+    // 重置密码
+    void resetPassword(String email, String newPassword);
 }
