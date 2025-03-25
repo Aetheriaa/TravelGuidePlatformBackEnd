@@ -5,15 +5,15 @@ spring:
   application:
     name: TravelGuidePlatform
   datasource:
-#    url: jdbc:mysql://localhost:3306/travel_platform?useSSL=false&serverTimezone=UTC&characterEncoding=utf8
     url: jdbc:mysql://localhost:3306/travel_platform?allowPublicKeyRetrieval=true&useSSL=true&serverTimezone=UTC&characterEncoding=utf8
+#    url: jdbc:mysql://mysql:3306/travel_platform?allowPublicKeyRetrieval=true&useSSL=true&serverTimezone=UTC&characterEncoding=utf8
     username: root
     password: 182818
     driver-class-name: com.mysql.cj.jdbc.Driver
   mail:
     host: smtp.qq.com  # QQ 邮箱的 SMTP 服务器地址
-    username: 1828182660@qq.com  # 你的 QQ 邮箱地址
-    password: jxiwahzkqzsujdic # 你的 QQ 邮箱授权码 (不是邮箱密码!)
+    username: 1828182660@qq.com
+    password: jxiwahzkqzsujdic
     port: 587  # 使用 STARTTLS 时的端口
     default-encoding: UTF-8
     properties:

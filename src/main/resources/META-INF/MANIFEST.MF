@@ -1,0 +1,36 @@
+Manifest-Version: 1.0
+Main-Class: top.aetheria.travelguideplatform.TravelGuidePlatformApplicat
+ ion
+Class-Path: mybatis-3.5.17.jar jul-to-slf4j-2.0.16.jar spring-beans-6.2.
+ 2.jar jackson-module-parameter-names-2.18.2.jar spring-webmvc-6.2.2.jar
+  pagehelper-5.3.2.jar netty-buffer-4.1.117.Final.jar spring-web-6.2.2.j
+ ar istack-commons-runtime-4.1.2.jar micrometer-commons-1.14.3.jar jakar
+ ta.xml.bind-api-2.3.3.jar spring-boot-starter-mail-3.4.2.jar spring-boo
+ t-starter-json-3.4.2.jar tomcat-embed-websocket-10.1.34.jar slf4j-api-2
+ .0.16.jar jsqlparser-4.5.jar spring-oxm-6.2.2.jar spring-boot-starter-j
+ dbc-3.4.2.jar spring-boot-starter-3.4.2.jar jackson-core-2.18.2.jar log
+ back-classic-1.5.16.jar netty-transport-4.1.117.Final.jar spring-contex
+ t-support-6.2.2.jar log4j-to-slf4j-2.24.3.jar jackson-datatype-jdk8-2.1
+ 8.2.jar jakarta.activation-1.2.2.jar mybatis-spring-boot-starter-3.0.4.
+ jar spring-boot-3.4.2.jar jackson-databind-2.18.2.jar pagehelper-spring
+ -boot-starter-1.4.6.jar reactor-core-3.7.2.jar pagehelper-spring-boot-a
+ utoconfigure-1.4.6.jar netty-handler-4.1.117.Final.jar spring-boot-star
+ ter-web-3.4.2.jar jackson-annotations-2.18.2.jar jjwt-0.9.1.jar spring-
+ data-redis-3.4.2.jar spring-expression-6.2.2.jar spring-tx-6.2.2.jar my
+ batis-spring-3.0.4.jar spring-boot-starter-tomcat-3.4.2.jar angus-activ
+ ation-2.0.2.jar spring-core-6.2.2.jar logback-core-1.5.16.jar spring-jc
+ l-6.2.2.jar reactive-streams-1.0.4.jar micrometer-observation-1.14.3.ja
+ r hanlp-portable-1.8.4.jar lettuce-core-6.4.2.RELEASE.jar spring-jdbc-6
+ .2.2.jar netty-transport-native-unix-common-4.1.117.Final.jar spring-da
+ ta-commons-3.4.2.jar log4j-api-2.24.3.jar jakarta.mail-2.0.3.jar mysql-
+ connector-j-8.0.33.jar jakarta.annotation-api-2.1.1.jar netty-resolver-
+ 4.1.117.Final.jar fastjson-1.2.83.jar spring-context-6.2.2.jar snakeyam
+ l-2.3.jar mybatis-spring-boot-autoconfigure-3.0.4.jar jackson-datatype-
+ jsr310-2.18.2.jar jaxb-runtime-2.3.3.jar spring-aop-6.2.2.jar lombok-1.
+ 18.36.jar spring-boot-starter-logging-3.4.2.jar jakarta.activation-api-
+ 2.1.3.jar netty-common-4.1.117.Final.jar txw2-4.0.5.jar netty-codec-4.1
+ .117.Final.jar spring-boot-autoconfigure-3.4.2.jar tomcat-embed-core-10
+ .1.34.jar tomcat-embed-el-10.1.34.jar spring-boot-starter-data-redis-3.
+ 4.2.jar HikariCP-5.1.0.jar spring-data-keyvalue-3.4.2.jar jakarta.valid
+ ation-api-2.0.2.jar
+

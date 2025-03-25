@@ -3,7 +3,9 @@ package top.aetheria.travelguideplatform.user.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.code.kaptcha.Producer;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -11,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import top.aetheria.travelguideplatform.common.constant.AppConstants;
+import top.aetheria.travelguideplatform.common.exception.BusinessException;
 import top.aetheria.travelguideplatform.common.utils.JwtUtils;
 import top.aetheria.travelguideplatform.common.vo.PageResult;
 import top.aetheria.travelguideplatform.common.vo.Result;
@@ -23,8 +26,12 @@ import top.aetheria.travelguideplatform.user.entity.User;
 import top.aetheria.travelguideplatform.user.service.UserService;
 import top.aetheria.travelguideplatform.user.vo.LoginVO;
 
-import java.util.List;
-import java.util.Map;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -38,6 +45,8 @@ public class UserController {
     @Autowired
     private JwtUtils jwtUtils;
 
+    @Autowired
+    private Producer kaptchaProducer; // 注入 Producer
     @PostMapping("/register")
     public Result register(@Validated @RequestBody UserRegisterDTO userRegisterDTO) {
         // 验证邮箱验证码
@@ -73,7 +82,16 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public Result<LoginVO> login(@Validated @RequestBody UserLoginDTO userLoginDTO) {
+    public Result<LoginVO> login(@Validated @RequestBody UserLoginDTO userLoginDTO, HttpServletRequest request) {
+        //1. 先从session中取出验证码
+        HttpSession session = request.getSession();
+        String captcha = (String) session.getAttribute("captcha");
+        session.removeAttribute("captcha");//获取之后就删除
+        //2. 验证码比较
+        if(captcha == null || !captcha.equalsIgnoreCase(userLoginDTO.getCaptcha())){
+//            throw new BusinessException(400,"验证码错误");
+            return  Result.error("验证码错误");
+        }
         logger.info("User login attempt: {}", userLoginDTO.getUsernameOrEmail());
         LoginVO loginVO = userService.login(userLoginDTO);
         logger.info("User login successful: {}", loginVO.getUsername());
@@ -286,4 +304,28 @@ public class UserController {
         logger.info("Returning {} users for search keyword: {}", users.size(), keyword);
         return Result.success(users);
     }
+
+    // 获取验证码图片
+    // 获取验证码图片
+    @GetMapping("/captcha")
+    public Result<Map<String, String>> getCaptcha(HttpServletRequest request) throws IOException {
+        // 生成验证码文本
+        String capText = kaptchaProducer.createText();
+        // 将验证码文本存储到 session 中
+        request.getSession().setAttribute("captcha", capText);
+        // 创建验证码图片
+        BufferedImage bi = kaptchaProducer.createImage(capText);
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ImageIO.write(bi, "jpg", outputStream);
+
+        // 将图片转换为 Base64 编码的字符串
+        String base64Image = Base64.getEncoder().encodeToString(outputStream.toByteArray());
+
+        // 构建返回数据
+        Map<String, String> result = new HashMap<>();
+        result.put("img", "data:image/jpeg;base64," + base64Image); // 添加 data:image/jpeg;base64, 前缀
+//        result.put("key",key); //验证码对应的key,这里不需要key了
+        return Result.success(result);
+    }
+
 }
